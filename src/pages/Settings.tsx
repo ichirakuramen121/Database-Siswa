@@ -81,10 +81,11 @@ export default function Settings() {
             <li>Klik menu <strong>Ekstensi</strong> {'>'} <strong>Apps Script</strong>.</li>
             <li>Hapus semua kode yang ada, copy paste kode di bawah ini <b>(Pastikan menyalin ulang karena ada tambahan NISN)</b>.</li>
             <li>Klik tombol <strong>Simpan</strong> (ikon Disket).</li>
+            <li><strong>Penting untuk Izin Folder:</strong> Pilih fungsi <code>setup</code> di bagian atas editor, lalu klik <strong>Jalankan (Run)</strong>. Berikan semua izin otorisasi yang diminta agar aplikasi dapat mengakses dan membuat folder.</li>
             <li>Klik tombol biru <strong>Terapkan (Deploy)</strong> {'>'} <strong>Deployment Baru</strong>.</li>
             <li>Pilih Jenis <strong>Aplikasi Web (Web App)</strong>.</li>
             <li>Atur Akses {'>'} Jalankan sebagai: <strong>Saya (Me)</strong>, Siapa yang memiliki akses: <strong>Siapa saja (Anyone)</strong>.</li>
-            <li>Klik Terapkan. Kemudian setujui perizinan Google jika diminta (Lanjutan {'>'} Buka).</li>
+            <li>Klik Terapkan.</li>
             <li>Copy URL Web App dan paste di form atas.</li>
           </ol>
 

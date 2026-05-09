@@ -33,6 +33,7 @@ export interface AppState {
   setStudents: (students: Student[]) => void;
   addStudent: (student: Student) => void;
   updateStudent: (id: string, data: Partial<Student>) => void;
+  updateStudentsBulk: (updates: {id: string, data: Partial<Student>}[]) => void;
   deleteStudent: (id: string) => void;
   setSettings: (settings: Settings) => void;
   setLoading: (loading: boolean) => void;

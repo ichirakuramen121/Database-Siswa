@@ -1,15 +1,18 @@
-import { useState } from 'react';
-import { Home, Users, Settings as SettingsIcon, Menu, X, LogOut } from 'lucide-react';
+import React, { useState } from 'react';
+import { Home, Users, Settings as SettingsIcon, Menu, X, LogOut, FileOutput, CalendarCheck, TrendingUp } from 'lucide-react';
 import { cn } from './lib/utils';
 import Dashboard from './pages/Dashboard';
 import StudentsList from './pages/StudentsList';
+import MutasiList from './pages/MutasiList';
+import AttendancePrint from './pages/AttendancePrint';
+import KenaikanKelas from './pages/KenaikanKelas';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import { useStore } from './store';
 
 function App() {
   const { isAuthenticated, logout, settings } = useStore();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'mutasi' | 'attendance' | 'kenaikan' | 'settings'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -32,6 +35,9 @@ function App() {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'students', label: 'Data Siswa', icon: Users },
+    { id: 'mutasi', label: 'Mutasi Siswa', icon: FileOutput },
+    { id: 'attendance', label: 'Cetak Daftar Hadir', icon: CalendarCheck },
+    { id: 'kenaikan', label: 'Kenaikan Kelas', icon: TrendingUp },
     { id: 'settings', label: 'Pengaturan', icon: SettingsIcon },
   ] as const;
 
@@ -102,6 +108,9 @@ function App() {
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 h-full">
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'students' && <StudentsList />}
+        {activeTab === 'mutasi' && <MutasiList />}
+        {activeTab === 'attendance' && <AttendancePrint />}
+        {activeTab === 'kenaikan' && <KenaikanKelas />}
         {activeTab === 'settings' && <Settings />}
       </div>
     </div>

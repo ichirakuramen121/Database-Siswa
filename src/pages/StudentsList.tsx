@@ -15,6 +15,7 @@ export default function StudentsList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Partial<Student>>({});
   const [printStudent, setPrintStudent] = useState<Student | null>(null);
+  const [isPrintListMode, setIsPrintListMode] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -112,6 +113,9 @@ export default function StudentsList() {
           </button>
           <button onClick={() => exportToExcel(filteredStudents)} className="btn-outline justify-center w-full sm:w-auto">
             <Download size={18} /> Export
+          </button>
+          <button onClick={() => setIsPrintListMode(true)} className="btn-outline justify-center w-full sm:w-auto">
+            <Printer size={18} /> Cetak
           </button>
           <button onClick={() => handleOpenModal()} className="btn justify-center w-full sm:w-auto">
             <Plus size={18} /> Tambah Siswa
@@ -344,6 +348,59 @@ export default function StudentsList() {
            <div className="mt-16 text-right">
               <p className="mb-16">.................., {new Date().toLocaleDateString('id-ID')}</p>
               <p className="font-semibold">( Administrasi Sekolah )</p>
+           </div>
+        </div>
+      )}
+
+      {/* Print ListView */}
+      {isPrintListMode && (
+        <div id="printable-area" className="bg-white p-8 max-w-5xl mx-auto fixed inset-0 overflow-y-auto z-[200]">
+           <div className="flex justify-between items-start no-print mb-8">
+              <button onClick={() => window.print()} className="btn">Cetak Sekarang</button>
+              <button onClick={() => setIsPrintListMode(false)} className="btn-outline"><X size={18} /> Tutup</button>
+           </div>
+           
+           <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold uppercase">DAFTAR SISWA SD</h1>
+              <p className="text-slate-600">
+                {filterClass ? `KELAS ${filterClass}` : 'SEMUA KELAS'}
+              </p>
+           </div>
+           
+           <table className="w-full text-left border-collapse border border-slate-400">
+             <thead>
+               <tr className="bg-slate-100">
+                 <th className="border border-slate-400 p-2 font-bold text-center">No</th>
+                 <th className="border border-slate-400 p-2 font-bold">NIS / NISN</th>
+                 <th className="border border-slate-400 p-2 font-bold">Nama Lengkap</th>
+                 <th className="border border-slate-400 p-2 font-bold text-center">L/P</th>
+                 <th className="border border-slate-400 p-2 font-bold text-center">Kelas</th>
+                 <th className="border border-slate-400 p-2 font-bold text-center">Status</th>
+               </tr>
+             </thead>
+             <tbody>
+               {filteredStudents.length === 0 ? (
+                 <tr><td colSpan={6} className="border border-slate-400 p-4 text-center">Tidak ada data</td></tr>
+               ) : (
+                 filteredStudents.map((s, idx) => (
+                   <tr key={s.id}>
+                     <td className="border border-slate-400 p-2 text-center">{idx + 1}</td>
+                     <td className="border border-slate-400 p-2">{s.nis} {s.nisn ? `/ ${s.nisn}` : ''}</td>
+                     <td className="border border-slate-400 p-2">{s.name}</td>
+                     <td className="border border-slate-400 p-2 text-center">{s.gender}</td>
+                     <td className="border border-slate-400 p-2 text-center">{s.class}</td>
+                     <td className="border border-slate-400 p-2 text-center">{s.status === 'Pindah' ? 'Mutasi' : s.status}</td>
+                   </tr>
+                 ))
+               )}
+             </tbody>
+           </table>
+           
+           <div className="mt-16 w-full flex justify-end">
+             <div className="text-center">
+                <p className="mb-16 text-right">.................., {new Date().toLocaleDateString('id-ID')}</p>
+                <p className="font-semibold text-right">( Administrasi Sekolah )</p>
+             </div>
            </div>
         </div>
       )}

@@ -18,6 +18,15 @@ export const useStore = create<AppState>()(
         set((state) => ({
           students: state.students.map((s) => (s.id === id ? { ...s, ...data } : s)),
         })),
+      updateStudentsBulk: (updates) =>
+        set((state) => {
+          const updateMap = new Map(updates.map((u) => [u.id, u.data]));
+          return {
+            students: state.students.map((s) =>
+              updateMap.has(s.id) ? { ...s, ...updateMap.get(s.id) } : s
+            ),
+          };
+        }),
       deleteStudent: (id) =>
         set((state) => ({
           students: state.students.filter((s) => s.id !== id),

@@ -22,10 +22,11 @@
   body * {
     visibility: hidden;
   }
-  #printable-area, #printable-area * {
+  #printable-area, #printable-area *,
+  .printable-container, .printable-container * {
     visibility: visible;
   }
-  #printable-area {
+  #printable-area, .printable-container {
     position: absolute;
     left: 0;
     top: 0;
@@ -33,5 +34,17 @@
   }
   .no-print {
     display: none !important;
+  }
+  
+  .print-table {
+    border-collapse: collapse !important;
+  }
+  .print-table th, .print-table td {
+    padding: 0.25rem !important; /* smaller padding for more columns */
+    font-size: 10pt !important;
+  }
+  @page {
+    size: landscape; 
+    margin: 1cm;
   }
 }
