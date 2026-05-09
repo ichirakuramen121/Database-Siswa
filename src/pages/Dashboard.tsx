@@ -1,5 +1,5 @@
 import { useStore } from '../store';
-import { Users, GraduationCap, UserMinus, HardDriveUpload } from 'lucide-react';
+import { Users, GraduationCap, UserMinus, HardDriveUpload, RefreshCw } from 'lucide-react';
 import { fetchFromGAS } from '../lib/api';
 import { useState } from 'react';
 
@@ -83,11 +83,19 @@ export default function Dashboard() {
       </div>
 
       <div className="bg-white/70 backdrop-blur-2xl p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] border border-white/90 shadow-lg mt-8 w-full overflow-hidden">
-        <h3 className="text-xl font-bold mb-4 text-indigo-900">Integrasi Database Realtime</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-indigo-900">Integrasi Database</h3>
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <span className="text-xs font-semibold text-green-600">Realtime Aktif</span>
+          </div>
+        </div>
         <p className="text-gray-600 mb-6 w-full text-sm sm:text-base leading-relaxed">
-          Aplikasi ini memprioritaskan penyimpanan lokal untuk kecepatan UI (PWA). 
-          Agar terhubung dengan Google Sheets, pastikan Anda telah menekan tombol "Sinkronkan" 
-          setelah menambah atau mengubah data siswa.
+          Aplikasi PWA ini tersinkronisasi otomatis (tarik data tiap 30 detik) jika ada perubahan dari admin lain. 
+          Namun, Anda tetap <b>HARUS</b> menekan tombol "Push Data" di bawah setelah melakukan <b>penambahan/perubahan</b> dari aplikasi Anda agar data tersimpan ke Google Sheets.
         </p>
         <div className="flex flex-col sm:flex-row flex-wrap gap-4">
           <button onClick={handleSyncToSheets} className="btn">
@@ -95,10 +103,11 @@ export default function Dashboard() {
             Push Data ke Google Sheets
           </button>
           <button onClick={handlePullFromSheets} className="btn-outline">
-            Tarik Data dari Google Sheets
+            <RefreshCw size={18} />
+            Tarik Data Manual
           </button>
         </div>
-        {syncStatus && <p className="mt-3 text-sm text-blue-600 font-medium">{syncStatus}</p>}
+        {syncStatus && <p className="mt-4 text-sm text-indigo-600 font-bold bg-indigo-50 p-3 rounded-lg border border-indigo-100">{syncStatus}</p>}
       </div>
     </div>
   );

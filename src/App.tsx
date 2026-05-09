@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Home, Users, Settings as SettingsIcon, Menu, X, LogOut, FileOutput, CalendarCheck, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Home, Users, Settings as SettingsIcon, Menu, X, LogOut, FileOutput, CalendarCheck, TrendingUp, RefreshCw } from 'lucide-react';
 import { cn } from './lib/utils';
 import Dashboard from './pages/Dashboard';
 import StudentsList from './pages/StudentsList';
@@ -9,12 +9,43 @@ import KenaikanKelas from './pages/KenaikanKelas';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import { useStore } from './store';
+import { fetchFromGAS } from './lib/api';
 
 function App() {
-  const { isAuthenticated, logout, settings } = useStore();
+  const { isAuthenticated, logout, settings, setStudents, students } = useStore();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'mutasi' | 'attendance' | 'kenaikan' | 'settings'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || !settings.scriptUrl) return;
+
+    let isMounted = true;
+    const fetchRealtimeData = async () => {
+      try {
+        setIsSyncing(true);
+        const res = await fetchFromGAS(settings.scriptUrl, { action: 'pull' });
+        if (res.data && isMounted) {
+          if (JSON.stringify(res.data) !== JSON.stringify(students)) {
+            setStudents(res.data);
+          }
+        }
+      } catch (e) {
+        console.error("Auto sync failed:", e);
+      } finally {
+        if (isMounted) setIsSyncing(false);
+      }
+    };
+
+    fetchRealtimeData(); 
+    const interval = setInterval(fetchRealtimeData, 30000); 
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [isAuthenticated, settings.scriptUrl, setStudents]);
 
   if (!isAuthenticated) {
     return <Login />;
