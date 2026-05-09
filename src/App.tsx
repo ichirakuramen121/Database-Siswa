@@ -12,11 +12,32 @@ import { useStore } from './store';
 import { fetchFromGAS } from './lib/api';
 
 function App() {
-  const { isAuthenticated, logout, settings, setStudents, students } = useStore();
+  const { isAuthenticated, logout, settings, setSettings, setStudents, students } = useStore();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'mutasi' | 'attendance' | 'kenaikan' | 'settings'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const configParam = params.get('config');
+    if (configParam) {
+      try {
+        const parsedConfig = JSON.parse(atob(decodeURIComponent(configParam)));
+        if (parsedConfig.scriptUrl) {
+          setSettings({
+            ...settings,
+            scriptUrl: parsedConfig.scriptUrl,
+            folderId: parsedConfig.folderId || settings.folderId
+          });
+          alert('Konfigurasi sinkronisasi berhasil ditambahkan! Silahkan login dan datanya akan tersinkronisasi.');
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } catch (e) {
+        console.error("Invalid config URL");
+      }
+    }
+  }, [setSettings, settings]);
 
   useEffect(() => {
     if (!isAuthenticated || !settings.scriptUrl) return;

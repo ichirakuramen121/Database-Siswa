@@ -1,7 +1,8 @@
 import { useStore } from '../store';
-import { Save, Copy, Check } from 'lucide-react';
+import { Save, Copy, Check, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 import { GAS_TEMPLATE } from '../lib/constants';
+import QRCode from "react-qr-code";
 
 export default function Settings() {
   const { settings, setSettings } = useStore();
@@ -9,6 +10,8 @@ export default function Settings() {
   const [appName, setAppName] = useState(settings.appName || 'EduConnect');
   const [folderId, setFolderId] = useState(settings.folderId || '');
   const [copied, setCopied] = useState(false);
+
+  const shareConfigUrl = settings.scriptUrl ? `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(btoa(JSON.stringify({ scriptUrl: settings.scriptUrl, folderId: settings.folderId })))}` : '';
 
   const handleSave = () => {
     setSettings({ ...settings, scriptUrl: url, appName, folderId });
@@ -73,6 +76,29 @@ export default function Settings() {
             Simpan Konfigurasi
           </button>
         </div>
+
+        {shareConfigUrl && (
+          <div className="mt-8 pt-8 border-t border-white/40">
+            <h3 className="text-xl font-bold mb-4 text-indigo-900 flex items-center gap-2">
+              <Smartphone size={24} className="text-indigo-600" />
+              Hubungkan ke Handphone Anda
+            </h3>
+            <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100 flex flex-col md:flex-row items-center gap-8">
+              <div className="flex-shrink-0 bg-white p-3 rounded-2xl shadow-sm border border-indigo-50">
+                <QRCode value={shareConfigUrl} size={150} level="M" />
+              </div>
+              <div>
+                <h4 className="font-bold text-indigo-900 mb-2">Sinkronisasi Super Cepat!</h4>
+                <p className="text-sm text-indigo-700/80 mb-4 leading-relaxed">
+                  Buka aplikasi kamera atau pemindai (scanner) di Handphone Anda, dan scan QR Code di samping untuk membuka aplikasi versi Mobile. Konfigurasi Google Sheets Anda akan otomatis tersinkronisasi.
+                </p>
+                <div className="flex bg-white border border-indigo-100 rounded-lg overflow-hidden relative">
+                  <input type="text" readOnly value={shareConfigUrl} className="w-full text-xs text-slate-500 p-2 outline-none cursor-text" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-8 pt-8 border-t border-white/40">
           <h4 className="font-semibold text-indigo-900 mb-3 text-lg">Panduan Instalasi Script</h4>
