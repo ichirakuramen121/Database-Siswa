@@ -23,6 +23,11 @@ function setup() {
     sheet.getRange(1, 1, 1, 15).setFontWeight("bold");
     sheet.setFrozenRows(1);
   }
+  
+  // Memancing agar Google meminta izin akses Google Drive saat setup() dijalankan
+  try {
+    DriveApp.getRootFolder();
+  } catch(e) {}
 }
 
 function doPost(e) {
