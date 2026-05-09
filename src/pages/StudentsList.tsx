@@ -335,27 +335,41 @@ export default function StudentsList() {
               <p className="text-slate-600">Sekolah Dasar</p>
            </div>
            
-           <div className="flex flex-col md:flex-row gap-8 mb-8">
-              {printStudent.fotoUrl && (
-                 <div className="w-32 h-40 shrink-0 border-2 border-slate-300 p-1 bg-white">
-                    <img src={printStudent.fotoUrl} alt="Foto Siswa" className="w-full h-full object-cover" />
-                 </div>
-              )}
-              <table className="w-full text-left text-lg">
+           <div className="flex flex-row justify-between items-start gap-8 mb-8">
+              <table className="w-full text-left text-base sm:text-lg flex-1">
                 <tbody>
-                  <tr><td className="py-2 w-1/3 md:w-1/4 font-semibold">NIS / NISN</td><td className="py-2">: {printStudent.nis} {printStudent.nisn ? `/ ${printStudent.nisn}` : ''}</td></tr>
-                  <tr><td className="py-2 font-semibold">Nama Lengkap</td><td className="py-2">: {printStudent.name}</td></tr>
-                  <tr><td className="py-2 font-semibold">Kelas</td><td className="py-2">: {printStudent.class}</td></tr>
-                  <tr><td className="py-2 font-semibold">Jenis Kelamin</td><td className="py-2">: {printStudent.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</td></tr>
-                  <tr><td className="py-2 font-semibold">Tanggal Lahir</td><td className="py-2">: {printStudent.dob}</td></tr>
-                  <tr><td className="py-2 font-semibold">Nama Orang Tua</td><td className="py-2">: {printStudent.parentName}</td></tr>
-                  <tr><td className="py-2 font-semibold align-top">Alamat</td><td className="py-2">: {printStudent.address}</td></tr>
-                  <tr><td className="py-2 font-semibold">Status</td><td className="py-2">: {printStudent.status}</td></tr>
+                  <tr><td className="py-1 sm:py-2 w-1/3 md:w-1/4 font-semibold">NIS / NISN</td><td className="py-1 sm:py-2">: {printStudent.nis} {printStudent.nisn ? `/ ${printStudent.nisn}` : ''}</td></tr>
+                  <tr><td className="py-1 sm:py-2 font-semibold">Nama Lengkap</td><td className="py-1 sm:py-2">: {printStudent.name}</td></tr>
+                  <tr><td className="py-1 sm:py-2 font-semibold">Kelas</td><td className="py-1 sm:py-2">: {printStudent.class}</td></tr>
+                  <tr><td className="py-1 sm:py-2 font-semibold">Jenis Kelamin</td><td className="py-1 sm:py-2">: {printStudent.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</td></tr>
+                  <tr><td className="py-1 sm:py-2 font-semibold">Tanggal Lahir</td><td className="py-1 sm:py-2">: {printStudent.dob}</td></tr>
+                  <tr><td className="py-1 sm:py-2 font-semibold">Nama Orang Tua</td><td className="py-1 sm:py-2">: {printStudent.parentName}</td></tr>
+                  <tr><td className="py-1 sm:py-2 font-semibold align-top">Alamat</td><td className="py-1 sm:py-2">: {printStudent.address}</td></tr>
+                  <tr><td className="py-1 sm:py-2 font-semibold">Status</td><td className="py-1 sm:py-2">: {printStudent.status}</td></tr>
                   {printStudent.status === 'Lulus' && (
-                     <tr><td className="py-2 font-semibold">Nomor Ijazah</td><td className="py-2">: {printStudent.ijazahNo || '-'}</td></tr>
+                     <tr><td className="py-1 sm:py-2 font-semibold">Nomor Ijazah</td><td className="py-1 sm:py-2">: {printStudent.ijazahNo || '-'}</td></tr>
                   )}
                 </tbody>
               </table>
+
+              {printStudent.fotoUrl && (
+                 <div className="w-[3cm] h-[4cm] sm:w-[4cm] sm:h-[6cm] shrink-0 border-2 border-slate-800 p-1 bg-white relative flex items-center justify-center text-center overflow-hidden no-print-bg">
+                    <img 
+                      src={printStudent.fotoUrl.replace(/\/file\/d\/(.+?)\/view.*/, '/uc?export=view&id=$1')} 
+                      alt="Foto Siswa" 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        if (!(e.target as HTMLImageElement).parentElement?.querySelector('.error-text')) {
+                          const span = document.createElement('span');
+                          span.className = "error-text text-[10px] text-gray-500 absolute inline-block p-1";
+                          span.innerText = "Foto tidak dapat ditampilkan (Mungkin Folder Google Drive belum di set Publik)";
+                          (e.target as HTMLImageElement).parentElement?.appendChild(span);
+                        }
+                      }}
+                    />
+                 </div>
+              )}
            </div>
            
            <div className="mt-16 text-right">
