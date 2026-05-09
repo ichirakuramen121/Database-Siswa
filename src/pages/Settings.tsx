@@ -9,12 +9,14 @@ export default function Settings() {
   const [url, setUrl] = useState(settings.scriptUrl);
   const [appName, setAppName] = useState(settings.appName || 'EduConnect');
   const [folderId, setFolderId] = useState(settings.folderId || '');
+  const [adminUser, setAdminUser] = useState(settings.adminUsername || 'admin');
+  const [adminPass, setAdminPass] = useState(settings.adminPassword || 'admin');
   const [copied, setCopied] = useState(false);
 
-  const shareConfigUrl = settings.scriptUrl ? `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(btoa(JSON.stringify({ scriptUrl: settings.scriptUrl, folderId: settings.folderId, appName: settings.appName })))}` : '';
+  const shareConfigUrl = settings.scriptUrl ? `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(btoa(JSON.stringify({ scriptUrl: settings.scriptUrl, folderId: settings.folderId, appName: settings.appName, adminUsername: settings.adminUsername, adminPassword: settings.adminPassword })))}` : '';
 
   const handleSave = () => {
-    setSettings({ ...settings, scriptUrl: url, appName, folderId });
+    setSettings({ ...settings, scriptUrl: url, appName, folderId, adminUsername: adminUser, adminPassword: adminPass });
     alert("Pengaturan Berhasil Disimpan!");
   };
 
@@ -43,6 +45,28 @@ export default function Settings() {
               value={appName}
               onChange={(e) => setAppName(e.target.value)}
             />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Username Login</label>
+              <input 
+                type="text" 
+                className="input w-full text-sm sm:text-base" 
+                placeholder="admin"
+                value={adminUser}
+                onChange={(e) => setAdminUser(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Password Login</label>
+              <input 
+                type="password" 
+                className="input w-full text-sm sm:text-base" 
+                placeholder="admin"
+                value={adminPass}
+                onChange={(e) => setAdminPass(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 

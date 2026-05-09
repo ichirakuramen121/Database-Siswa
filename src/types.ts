@@ -23,6 +23,8 @@ export interface Settings {
   scriptUrl: string;
   folderId?: string;
   appName?: string;
+  adminUsername?: string;
+  adminPassword?: string;
 }
 
 export interface AppState {

@@ -13,7 +13,10 @@ export default function Login() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'admin') {
+    const correctUsername = settings?.adminUsername || 'admin';
+    const correctPassword = settings?.adminPassword || 'admin';
+    
+    if (username === correctUsername && password === correctPassword) {
       setIsLoggingIn(true);
       setTimeout(() => {
         setIsLoggingIn(false);
@@ -119,7 +122,7 @@ export default function Login() {
           </form>
           
           <div className="mt-8 text-center text-xs sm:text-sm text-gray-500">
-            <p>Gunakan user: <strong>admin</strong> dan password: <strong>admin</strong></p>
+            <p>Silakan gunakan kredensial yang telah diatur (Default: <strong>admin</strong> / <strong>admin</strong>)</p>
           </div>
         </div>
       </div>
