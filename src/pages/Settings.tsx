@@ -79,14 +79,15 @@ export default function Settings() {
           <ol className="list-decimal list-inside text-sm text-gray-600 space-y-2 mb-6 leading-relaxed">
             <li>Buat Google Spreadsheet baru di Google Drive Anda.</li>
             <li>Klik menu <strong>Ekstensi</strong> {'>'} <strong>Apps Script</strong>.</li>
-            <li>Hapus semua kode yang ada, copy paste kode di bawah ini <b>(Pastikan menyalin ulang karena ada tambahan NISN)</b>.</li>
+            <li>Hapus semua kode yang ada, copy paste kode di bawah ini <b>(Pastikan menyalin ulang karena ada tambahan izin Drive)</b>.</li>
             <li>Klik tombol <strong>Simpan</strong> (ikon Disket).</li>
-            <li><strong>Penting untuk Izin Folder:</strong> Pilih fungsi <code>setup</code> di bagian atas editor, lalu klik <strong>Jalankan (Run)</strong>. Berikan semua izin otorisasi yang diminta agar aplikasi dapat mengakses dan membuat folder.</li>
-            <li>Klik tombol biru <strong>Terapkan (Deploy)</strong> {'>'} <strong>Deployment Baru</strong>.</li>
+            <li className="text-rose-600 font-bold">SANGAT PENTING UNTUK IZIN UPLOAD: Pilih fungsi <code>setup</code> di dropdown bagian atas editor, lalu klik <strong>Jalankan (Run)</strong>.</li>
+            <li className="text-rose-600 font-bold">Akan muncul popup "Otorisasi Diperlukan". Klik Tinjau Izin {'>'} Pilih akun Anda {'>'} Klik Lanjutan (Advanced) di bawah {'>'} Klik Buka project (tidak aman) {'>'} Izinkan (Allow).</li>
+            <li>Klik tombol biru <strong>Terapkan (Deploy)</strong> {'>'} <strong>Deployment Baru (New deployment)</strong>. <i>(Jika tidak buat deployment baru, izin tidak akan terupdate!)</i></li>
             <li>Pilih Jenis <strong>Aplikasi Web (Web App)</strong>.</li>
             <li>Atur Akses {'>'} Jalankan sebagai: <strong>Saya (Me)</strong>, Siapa yang memiliki akses: <strong>Siapa saja (Anyone)</strong>.</li>
             <li>Klik Terapkan.</li>
-            <li>Copy URL Web App dan paste di form atas.</li>
+            <li>Copy URL Web App dan paste di form konfigurasi di atas.</li>
           </ol>
 
           <div className="relative">
