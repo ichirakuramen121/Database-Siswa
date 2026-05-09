@@ -15,8 +15,21 @@ export default function KenaikanKelas() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [students, selectedClass]);
 
-  const currentIndex = CLASSES.indexOf(selectedClass);
-  const nextClass = currentIndex >= 0 && currentIndex < CLASSES.length - 1 ? CLASSES[currentIndex + 1] : 'Lulus';
+  // Calculate next class dynamically based on Grade + letter
+  const nextClass = useMemo(() => {
+    if (!selectedClass) return 'Lulus';
+    const gradeMatch = selectedClass.match(/^(\d+)([a-zA-Z]*)$/);
+    if (!gradeMatch) return 'Lulus';
+    
+    const grade = parseInt(gradeMatch[1]);
+    const section = gradeMatch[2] || '';
+    
+    if (grade >= 6) {
+      return 'Lulus';
+    } else {
+      return `${grade + 1}${section}`;
+    }
+  }, [selectedClass]);
 
   const handlePromoteAll = () => {
     if (classStudents.length === 0) {

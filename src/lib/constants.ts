@@ -18,9 +18,10 @@ function setup() {
     sheet.appendRow([
       "id", "nis", "nisn", "name", "class", "gender", "dob", "address", 
       "parentName", "status", "ijazahNo", "ijazahUrl", "berkasUrl", 
+      "kkUrl", "akteUrl", "fotoUrl",
       "createdAt", "updatedAt"
     ]);
-    sheet.getRange(1, 1, 1, 15).setFontWeight("bold");
+    sheet.getRange(1, 1, 1, 18).setFontWeight("bold");
     sheet.setFrozenRows(1);
   }
   
@@ -61,6 +62,7 @@ function doPost(e) {
           s.id || "", s.nis || "", s.nisn || "", s.name || "", s.class || "", s.gender || "", 
           s.dob || "", s.address || "", s.parentName || "", s.status || "", 
           s.ijazahNo || "", s.ijazahUrl || "", s.berkasUrl || "", 
+          s.kkUrl || "", s.akteUrl || "", s.fotoUrl || "",
           s.createdAt || "", s.updatedAt || ""
         ]);
         sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
@@ -124,7 +126,12 @@ function handleUpload(payload) {
   try {
     let folder;
     if (payload.folderId) {
-      folder = DriveApp.getFolderById(payload.folderId);
+      // Menangani error jika Folder ID salah
+      try {
+        folder = DriveApp.getFolderById(payload.folderId);
+      } catch (e) {
+        return jsonResponse({ error: "Folder ID tidak valid atau tidak dapat diakses." });
+      }
     } else {
       const folderName = payload.folderName || "SISWA_UPLOADS";
       const folders = DriveApp.getFoldersByName(folderName);
@@ -134,6 +141,11 @@ function handleUpload(payload) {
         folder = DriveApp.createFolder(folderName);
         folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       }
+    }
+    
+    // Pastikan folder ada sebelum membuat file
+    if (!folder) {
+      return jsonResponse({ error: "Gagal mendapatkan atau membuat folder upload." });
     }
     
     const blob = Utilities.newBlob(Utilities.base64Decode(payload.base64), payload.mimeType, payload.filename);

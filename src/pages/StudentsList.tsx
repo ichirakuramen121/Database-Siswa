@@ -53,7 +53,7 @@ export default function StudentsList() {
     setIsModalOpen(false);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'berkas' | 'ijazah') => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'kk' | 'akte' | 'foto') => {
     if (!settings.scriptUrl) {
       alert("Atur Google Apps Script URL di pengaturan untuk mengaktifkan upload Drive.");
       return;
@@ -63,8 +63,9 @@ export default function StudentsList() {
 
     try {
       const url = await uploadFileToGAS(settings.scriptUrl, file, settings.folderId, "SISWA_UPLOADS");
-      if (type === 'berkas') setCurrentStudent(prev => ({ ...prev, berkasUrl: url }));
-      if (type === 'ijazah') setCurrentStudent(prev => ({ ...prev, ijazahUrl: url }));
+      if (type === 'kk') setCurrentStudent(prev => ({ ...prev, kkUrl: url }));
+      if (type === 'akte') setCurrentStudent(prev => ({ ...prev, akteUrl: url }));
+      if (type === 'foto') setCurrentStudent(prev => ({ ...prev, fotoUrl: url }));
       alert("Berkas berhasil diupload!");
     } catch (err: any) {
       alert("Gagal upload: " + err.message);
@@ -287,23 +288,28 @@ export default function StudentsList() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-200">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-200">
                     <div>
-                       <label className="label">Upload Berkas Siswa</label>
+                       <label className="label">Upload KK (Opsional)</label>
                        <div className="flex gap-2">
-                          <input type="file" className="text-sm" onChange={e => handleFileUpload(e, 'berkas')} />
+                          <input type="file" className="text-sm" onChange={e => handleFileUpload(e, 'kk')} />
                        </div>
-                       {currentStudent.berkasUrl && <a href={currentStudent.berkasUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-block mt-1">Lihat Berkas Saat Ini</a>}
+                       {currentStudent.kkUrl && <a href={currentStudent.kkUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-block mt-1">Lihat KK Saat Ini</a>}
                     </div>
-                    {currentStudent.status === 'Lulus' && (
-                       <div>
-                         <label className="label">Upload File Ijazah</label>
-                         <div className="flex gap-2">
-                            <input type="file" className="text-sm" onChange={e => handleFileUpload(e, 'ijazah')} />
-                         </div>
-                         {currentStudent.ijazahUrl && <a href={currentStudent.ijazahUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-block mt-1">Lihat Ijazah Saat Ini</a>}
+                    <div>
+                       <label className="label">Upload Akte (Opsional)</label>
+                       <div className="flex gap-2">
+                          <input type="file" className="text-sm" onChange={e => handleFileUpload(e, 'akte')} />
                        </div>
-                    )}
+                       {currentStudent.akteUrl && <a href={currentStudent.akteUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-block mt-1">Lihat Akte Saat Ini</a>}
+                    </div>
+                    <div>
+                         <label className="label">Upload Foto (Opsional)</label>
+                         <div className="flex gap-2">
+                            <input type="file" accept="image/*" className="text-sm" onChange={e => handleFileUpload(e, 'foto')} />
+                         </div>
+                         {currentStudent.fotoUrl && <a href={currentStudent.fotoUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-block mt-1">Lihat Foto Saat Ini</a>}
+                    </div>
                   </div>
 
                   <div className="flex justify-end gap-2 pt-4 pb-4 sm:pt-6 sm:pb-0 sticky bottom-0 z-20 bg-white/95 sm:bg-transparent backdrop-blur-md p-4 sm:p-0 -mx-5 sm:mx-0 mt-4 border-t border-gray-100 sm:border-0">
@@ -329,21 +335,28 @@ export default function StudentsList() {
               <p className="text-slate-600">Sekolah Dasar</p>
            </div>
            
-           <table className="w-full text-left text-lg">
-             <tbody>
-               <tr><td className="py-2 w-1/3 font-semibold">NIS / NISN</td><td className="py-2">: {printStudent.nis} {printStudent.nisn ? `/ ${printStudent.nisn}` : ''}</td></tr>
-               <tr><td className="py-2 font-semibold">Nama Lengkap</td><td className="py-2">: {printStudent.name}</td></tr>
-               <tr><td className="py-2 font-semibold">Kelas</td><td className="py-2">: {printStudent.class}</td></tr>
-               <tr><td className="py-2 font-semibold">Jenis Kelamin</td><td className="py-2">: {printStudent.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</td></tr>
-               <tr><td className="py-2 font-semibold">Tanggal Lahir</td><td className="py-2">: {printStudent.dob}</td></tr>
-               <tr><td className="py-2 font-semibold">Nama Orang Tua</td><td className="py-2">: {printStudent.parentName}</td></tr>
-               <tr><td className="py-2 font-semibold align-top">Alamat</td><td className="py-2">: {printStudent.address}</td></tr>
-               <tr><td className="py-2 font-semibold">Status</td><td className="py-2">: {printStudent.status}</td></tr>
-               {printStudent.status === 'Lulus' && (
-                  <tr><td className="py-2 font-semibold">Nomor Ijazah</td><td className="py-2">: {printStudent.ijazahNo || '-'}</td></tr>
-               )}
-             </tbody>
-           </table>
+           <div className="flex flex-col md:flex-row gap-8 mb-8">
+              {printStudent.fotoUrl && (
+                 <div className="w-32 h-40 shrink-0 border-2 border-slate-300 p-1 bg-white">
+                    <img src={printStudent.fotoUrl} alt="Foto Siswa" className="w-full h-full object-cover" />
+                 </div>
+              )}
+              <table className="w-full text-left text-lg">
+                <tbody>
+                  <tr><td className="py-2 w-1/3 md:w-1/4 font-semibold">NIS / NISN</td><td className="py-2">: {printStudent.nis} {printStudent.nisn ? `/ ${printStudent.nisn}` : ''}</td></tr>
+                  <tr><td className="py-2 font-semibold">Nama Lengkap</td><td className="py-2">: {printStudent.name}</td></tr>
+                  <tr><td className="py-2 font-semibold">Kelas</td><td className="py-2">: {printStudent.class}</td></tr>
+                  <tr><td className="py-2 font-semibold">Jenis Kelamin</td><td className="py-2">: {printStudent.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</td></tr>
+                  <tr><td className="py-2 font-semibold">Tanggal Lahir</td><td className="py-2">: {printStudent.dob}</td></tr>
+                  <tr><td className="py-2 font-semibold">Nama Orang Tua</td><td className="py-2">: {printStudent.parentName}</td></tr>
+                  <tr><td className="py-2 font-semibold align-top">Alamat</td><td className="py-2">: {printStudent.address}</td></tr>
+                  <tr><td className="py-2 font-semibold">Status</td><td className="py-2">: {printStudent.status}</td></tr>
+                  {printStudent.status === 'Lulus' && (
+                     <tr><td className="py-2 font-semibold">Nomor Ijazah</td><td className="py-2">: {printStudent.ijazahNo || '-'}</td></tr>
+                  )}
+                </tbody>
+              </table>
+           </div>
            
            <div className="mt-16 text-right">
               <p className="mb-16">.................., {new Date().toLocaleDateString('id-ID')}</p>

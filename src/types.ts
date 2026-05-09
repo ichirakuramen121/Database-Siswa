@@ -12,6 +12,9 @@ export interface Student {
   ijazahNo?: string;
   ijazahUrl?: string;
   berkasUrl?: string;
+  kkUrl?: string;
+  akteUrl?: string;
+  fotoUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
