@@ -18,6 +18,8 @@ export interface Student {
 
 export interface Settings {
   scriptUrl: string;
+  folderId?: string;
+  appName?: string;
 }
 
 export interface AppState {

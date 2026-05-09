@@ -44,12 +44,9 @@ export default function Dashboard() {
     try {
       setSyncStatus('Mengunduh data...');
       setLoading(true);
-      const res = await fetchFromGAS(settings.scriptUrl, { action: 'pull' }); // A simple GET or POST mapping to get data. But our GET fetches data.
-      // Wait, we can fetch via GET
-      const response = await fetch(settings.scriptUrl);
-      const json = await response.json();
-      if(json.data) {
-        setStudents(json.data);
+      const res = await fetchFromGAS(settings.scriptUrl, { action: 'pull' });
+      if(res.data) {
+        setStudents(res.data);
       }
       setSyncStatus('Berhasil mengambil data dari Google Sheets!');
       setTimeout(() => setSyncStatus(''), 3000);

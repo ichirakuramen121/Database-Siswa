@@ -63,6 +63,24 @@ function doPost(e) {
       return jsonResponse({ success: true, message: "Data synced successfully" });
     }
 
+    if (payload.action === "pull") {
+      const data = sheet.getDataRange().getValues();
+      if (data.length <= 1) return jsonResponse({ data: [] });
+      
+      const headers = data[0];
+      const records = [];
+      
+      for (let i = 1; i < data.length; i++) {
+          let row = data[i];
+          let obj = {};
+          for (let j = 0; j < headers.length; j++) {
+             obj[headers[j]] = row[j];
+          }
+          records.push(obj);
+      }
+      return jsonResponse({ data: records });
+    }
+
   } catch (error) {
     return jsonResponse({ error: error.toString() });
   }
@@ -99,14 +117,18 @@ function doGet(e) {
 
 function handleUpload(payload) {
   try {
-    const folderName = payload.folderName || "SISWA_UPLOADS";
     let folder;
-    const folders = DriveApp.getFoldersByName(folderName);
-    if (folders.hasNext()) {
-      folder = folders.next();
+    if (payload.folderId) {
+      folder = DriveApp.getFolderById(payload.folderId);
     } else {
-      folder = DriveApp.createFolder(folderName);
-      folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      const folderName = payload.folderName || "SISWA_UPLOADS";
+      const folders = DriveApp.getFoldersByName(folderName);
+      if (folders.hasNext()) {
+        folder = folders.next();
+      } else {
+        folder = DriveApp.createFolder(folderName);
+        folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      }
     }
     
     const blob = Utilities.newBlob(Utilities.base64Decode(payload.base64), payload.mimeType, payload.filename);

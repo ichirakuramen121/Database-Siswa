@@ -7,7 +7,7 @@ export const useStore = create<AppState>()(
     (set) => ({
       isAuthenticated: false,
       students: [],
-      settings: { scriptUrl: '' },
+      settings: { scriptUrl: '', appName: 'EduConnect', folderId: '' },
       isLoading: false,
       error: null,
       login: () => set({ isAuthenticated: true }),

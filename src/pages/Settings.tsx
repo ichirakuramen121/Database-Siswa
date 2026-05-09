@@ -6,10 +6,12 @@ import { GAS_TEMPLATE } from '../lib/constants';
 export default function Settings() {
   const { settings, setSettings } = useStore();
   const [url, setUrl] = useState(settings.scriptUrl);
+  const [appName, setAppName] = useState(settings.appName || 'EduConnect');
+  const [folderId, setFolderId] = useState(settings.folderId || '');
   const [copied, setCopied] = useState(false);
 
   const handleSave = () => {
-    setSettings({ ...settings, scriptUrl: url });
+    setSettings({ ...settings, scriptUrl: url, appName, folderId });
     alert("Pengaturan Berhasil Disimpan!");
   };
 
@@ -27,6 +29,20 @@ export default function Settings() {
       </div>
 
       <div className="bg-white/70 backdrop-blur-2xl p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] border border-white/90 shadow-lg">
+        <h3 className="text-xl font-bold mb-6 text-indigo-900">Konfigurasi Umum</h3>
+        <div className="space-y-4 mb-8">
+          <div>
+            <label className="label">Nama Aplikasi</label>
+            <input 
+              type="text" 
+              className="input w-full text-sm sm:text-base" 
+              placeholder="Contoh: EduConnect"
+              value={appName}
+              onChange={(e) => setAppName(e.target.value)}
+            />
+          </div>
+        </div>
+
         <h3 className="text-xl font-bold mb-6 text-indigo-900">Integrasi Google Sheets & Drive</h3>
         
         <div className="space-y-4">
@@ -39,6 +55,18 @@ export default function Settings() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
             />
+            <p className="text-xs text-gray-500 mt-2">Dapatkan URL ini dari proses deploy Google Apps Script.</p>
+          </div>
+          <div>
+            <label className="label">Folder ID Google Drive (Opsional)</label>
+            <input 
+              type="text" 
+              className="input w-full text-sm sm:text-base" 
+              placeholder="Contoh: 1BxiMVs0XzM... (Ambil dari URL folder)"
+              value={folderId}
+              onChange={(e) => setFolderId(e.target.value)}
+            />
+            <p className="text-xs text-gray-500 mt-2">Jika dikosongkan, script akan otomatis membuat folder "SISWA_UPLOADS".</p>
           </div>
           <button onClick={handleSave} className="btn w-full sm:w-auto">
             <Save size={18} />

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore } from '../store';
 import { Student } from '../types';
 import { CLASSES, STATUSES, generateId, cn } from '../lib/utils';
@@ -61,7 +61,7 @@ export default function StudentsList() {
     if (!file) return;
 
     try {
-      const url = await uploadFileToGAS(settings.scriptUrl, file, "SISWA_UPLOADS");
+      const url = await uploadFileToGAS(settings.scriptUrl, file, settings.folderId, "SISWA_UPLOADS");
       if (type === 'berkas') setCurrentStudent(prev => ({ ...prev, berkasUrl: url }));
       if (type === 'ijazah') setCurrentStudent(prev => ({ ...prev, ijazahUrl: url }));
       alert("Berkas berhasil diupload!");

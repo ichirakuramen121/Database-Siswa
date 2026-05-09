@@ -16,20 +16,27 @@ export const fetchFromGAS = async (url: string, payload: any) => {
   // Use POST to send data
   const response = await fetch(url, {
     method: 'POST',
-    body: JSON.stringify(payload),
-    // Standard web app fetch doesn't use headers to avoid CORS preflight issues 
-    // when talking to script.google.com due to redirects
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify(payload)
   });
+
+  if (!response.ok) {
+     throw new Error("HTTP Error: " + response.status);
+  }
 
   const text = await response.text();
   try {
-    return JSON.parse(text);
+    const data = JSON.parse(text);
+    if (data.error) throw new Error(data.error);
+    return data;
   } catch (e) {
     throw new Error(`Invalid response from server: ${text}`);
   }
 };
 
-export const uploadFileToGAS = async (url: string, file: File, folderName: string = "SI_Siswa_Uploads") => {
+export const uploadFileToGAS = async (url: string, file: File, folderId?: string, folderName: string = "SI_Siswa_Uploads") => {
   const base64Data = await fileToBase64(file);
   // Remove data:image/png;base64, prefix
   const base64Content = base64Data.split(',')[1];
@@ -39,7 +46,8 @@ export const uploadFileToGAS = async (url: string, file: File, folderName: strin
     filename: file.name,
     mimeType: file.type,
     base64: base64Content,
-    folderName
+    folderName,
+    folderId
   };
 
   const res = await fetchFromGAS(url, payload);

@@ -8,13 +8,26 @@ import Login from './pages/Login';
 import { useStore } from './store';
 
 function App() {
-  const { isAuthenticated, logout } = useStore();
+  const { isAuthenticated, logout, settings } = useStore();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'settings'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   if (!isAuthenticated) {
     return <Login />;
   }
+
+  const appName = settings.appName || 'EduConnect';
+
+  const handleLogout = () => {
+    if(window.confirm('Apakah Anda yakin ingin keluar?')) {
+      setIsLoggingOut(true);
+      setTimeout(() => {
+        setIsLoggingOut(false);
+        logout();
+      }, 1000);
+    }
+  };
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -24,9 +37,15 @@ function App() {
 
   return (
     <div className="h-screen w-full bg-gradient-to-br from-[#e0e7ff] via-[#f3e8ff] to-[#fce7f3] flex flex-col md:flex-row font-sans text-gray-800">
+      {isLoggingOut && (
+        <div className="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
+          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+          <p className="text-indigo-900 font-medium">Sedang keluar...</p>
+        </div>
+      )}
       {/* Mobile Top Bar */}
       <div className="md:hidden bg-indigo-600/90 backdrop-blur-md text-white p-4 flex justify-between items-center no-print z-50">
-        <h1 className="font-bold text-lg tracking-tight">SI Siswa</h1>
+        <h1 className="font-bold text-lg tracking-tight">{appName}</h1>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition">
           {isMobileMenuOpen ? <X /> : <Menu />}
         </button>
@@ -38,10 +57,10 @@ function App() {
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="mb-10 hidden md:flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 flex-shrink-0">
             <Users className="w-6 h-6 text-white" />
           </div>
-          <span className="font-bold text-xl tracking-tight text-indigo-900">EduConnect</span>
+          <span className="font-bold text-xl tracking-tight text-indigo-900 truncate">{appName}</span>
         </div>
         <nav className="flex-1 space-y-2 overflow-y-auto mt-6 md:mt-0 pr-2">
           <div className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2 hidden md:block">Menu Utama</div>
@@ -70,7 +89,7 @@ function App() {
 
         <div className="mt-auto pt-6 border-t border-white/20">
           <button 
-            onClick={logout}
+            onClick={handleLogout}
             className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left font-medium text-rose-600 hover:bg-rose-50 border border-transparent"
           >
             <LogOut size={20} />
