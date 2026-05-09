@@ -324,7 +324,7 @@ export default function StudentsList() {
 
       {/* Print View */}
       {printStudent && (
-        <div id="printable-area" className="bg-white p-8 max-w-2xl mx-auto fixed inset-0 overflow-y-auto z-[200]">
+        <div id="printable-area" className="bg-white p-8 max-w-2xl mx-auto fixed inset-0 overflow-y-auto print:overflow-visible print:relative print:inset-auto print:p-0 z-[200]">
            <div className="flex justify-between items-start no-print mb-8">
               <button onClick={() => window.print()} className="btn">Cetak Sekarang</button>
               <button onClick={() => setPrintStudent(null)} className="btn-outline"><X size={18} /> Tutup</button>
@@ -381,7 +381,7 @@ export default function StudentsList() {
 
       {/* Print ListView */}
       {isPrintListMode && (
-        <div id="printable-area" className="bg-white p-8 max-w-5xl mx-auto fixed inset-0 overflow-y-auto z-[200]">
+        <div id="printable-area" className="bg-white p-8 max-w-5xl mx-auto fixed inset-0 overflow-y-auto print:overflow-visible print:relative print:inset-auto print:p-0 z-[200]">
            <div className="flex justify-between items-start no-print mb-8">
               <button onClick={() => window.print()} className="btn">Cetak Sekarang</button>
               <button onClick={() => setIsPrintListMode(false)} className="btn-outline"><X size={18} /> Tutup</button>

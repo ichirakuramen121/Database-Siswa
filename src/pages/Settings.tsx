@@ -11,7 +11,7 @@ export default function Settings() {
   const [folderId, setFolderId] = useState(settings.folderId || '');
   const [copied, setCopied] = useState(false);
 
-  const shareConfigUrl = settings.scriptUrl ? `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(btoa(JSON.stringify({ scriptUrl: settings.scriptUrl, folderId: settings.folderId })))}` : '';
+  const shareConfigUrl = settings.scriptUrl ? `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(btoa(JSON.stringify({ scriptUrl: settings.scriptUrl, folderId: settings.folderId, appName: settings.appName })))}` : '';
 
   const handleSave = () => {
     setSettings({ ...settings, scriptUrl: url, appName, folderId });

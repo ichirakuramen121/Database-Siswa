@@ -88,8 +88,8 @@ export default function AttendancePrint() {
            <p className="text-gray-500 mt-2">Silakan tambahkan siswa terlebih dahulu.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto p-4 md:p-8 print:shadow-none print:border-none print:p-0">
-          <div className="printable-container min-w-[900px]">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto p-4 md:p-8 print:shadow-none print:border-none print:p-0 print:overflow-visible">
+          <div className="printable-container min-w-[900px] print:min-w-0">
             
             <div className="text-center mb-6">
               <h1 className="text-2xl font-bold uppercase mb-1">Daftar Hadir Siswa</h1>

@@ -28,7 +28,8 @@ function App() {
           setSettings({
             ...settings,
             scriptUrl: parsedConfig.scriptUrl,
-            folderId: parsedConfig.folderId || settings.folderId
+            folderId: parsedConfig.folderId || settings.folderId,
+            appName: parsedConfig.appName || settings.appName
           });
           alert('Konfigurasi sinkronisasi berhasil ditambahkan! Silahkan login dan datanya akan tersinkronisasi.');
           window.history.replaceState({}, document.title, window.location.pathname);
