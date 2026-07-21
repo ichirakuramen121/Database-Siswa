@@ -3,23 +3,29 @@ import { useStore } from '../store';
 import { Student } from '../types';
 import { CLASSES, STATUSES, generateId, cn } from '../lib/utils';
 import { 
-  Search, Plus, Filter, Download, Upload, Edit, Trash2, Printer, X
+  Search, Plus, Filter, Download, Upload, Edit, Trash2, Printer, X, FileDown,
+  ArrowUpDown, FileSpreadsheet, Eye, BookOpen, User, Calendar, MapPin, UserCheck, DownloadCloud, UploadCloud
 } from 'lucide-react';
 import { exportToExcel, importFromExcel } from '../lib/excel';
 import { uploadFileToGAS } from '../lib/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function StudentsList() {
   const { students, addStudent, updateStudent, deleteStudent, settings } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState('');
+  const [sortBy, setSortBy] = useState<'default' | 'name-asc' | 'name-desc' | 'class-asc' | 'class-desc'>('default');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Partial<Student>>({});
+  const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [printStudent, setPrintStudent] = useState<Student | null>(null);
   const [isPrintListMode, setIsPrintListMode] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
-  // Derived filtered data
+  // Derived filtered & sorted data
   const filteredStudents = students.filter(s => {
     const searchString = searchTerm.toLowerCase();
     const matchesSearch = s.name.toLowerCase().includes(searchString) || 
@@ -28,6 +34,180 @@ export default function StudentsList() {
     const matchesClass = filterClass ? s.class === filterClass : true;
     return matchesSearch && matchesClass;
   });
+
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    if (sortBy === 'name-asc') {
+      return a.name.localeCompare(b.name, 'id');
+    }
+    if (sortBy === 'name-desc') {
+      return b.name.localeCompare(a.name, 'id');
+    }
+    if (sortBy === 'class-asc') {
+      return a.class.localeCompare(b.class);
+    }
+    if (sortBy === 'class-desc') {
+      return b.class.localeCompare(a.class);
+    }
+    return 0; // default
+  });
+
+  const downloadCSVTemplate = () => {
+    const headers = ["NIS", "NISN", "Nama Lengkap", "Kelas", "L/P", "Tgl Lahir (YYYY-MM-DD)", "Alamat", "Nama Orang Tua", "Status (Aktif/Lulus/Pindah/Keluar)"];
+    const rows = [
+      ["252601001", "1234567890", "Ahmad Fauzi", "1A", "L", "2015-05-12", "Jl. Merdeka No. 10", "Slamet", "Aktif"],
+      ["252601002", "0987654321", "Siti Aminah", "1A", "P", "2015-08-22", "Jl. Kenanga No. 4", "Budi", "Aktif"]
+    ];
+    
+    // Create CSV payload
+    const csvRows = [headers.join(","), ...rows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(","))];
+    const csvContent = "\uFEFF" + csvRows.join("\n"); // Add BOM for excel auto detection
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "template_siswa_sd.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split(/\r?\n/);
+        if (lines.length <= 1) {
+          alert("File CSV kosong atau format salah.");
+          return;
+        }
+
+        const newStudents: Student[] = [];
+        const now = new Date().toISOString();
+
+        // Helper to parse line with proper quotes
+        const parseCSVLine = (line: string): string[] => {
+          const result: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+              if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i++;
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (char === ',' && !inQuotes) {
+              result.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          result.push(current.trim());
+          return result;
+        };
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+
+          const cells = parseCSVLine(line);
+          if (cells.length < 3) continue; // Must at least have NIS, Name
+
+          const nis = cells[0] || '';
+          const nisn = cells[1] || '';
+          const name = cells[2] || '';
+          const sClass = cells[3] || '1A';
+          const gender = (cells[4] || 'L').toUpperCase() === 'P' ? 'P' : 'L';
+          const dob = cells[5] || '';
+          const address = cells[6] || '';
+          const parentName = cells[7] || '';
+          
+          const statusRaw = String(cells[8] || 'Aktif').trim();
+          let parsedStatus: 'Aktif' | 'Lulus' | 'Pindah' | 'Keluar' = 'Aktif';
+          if (statusRaw.toLowerCase().includes('lulus')) parsedStatus = 'Lulus';
+          else if (statusRaw.toLowerCase().includes('pindah') || statusRaw.toLowerCase().includes('mutasi')) parsedStatus = 'Pindah';
+          else if (statusRaw.toLowerCase().includes('keluar')) parsedStatus = 'Keluar';
+
+          newStudents.push({
+            id: generateId(),
+            nis,
+            nisn,
+            name,
+            class: sClass,
+            gender,
+            dob,
+            address,
+            parentName,
+            status: parsedStatus,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        if (newStudents.length === 0) {
+          alert("Tidak ada data valid yang diimport.");
+          return;
+        }
+
+        newStudents.forEach(s => addStudent(s));
+        alert(`Berhasil mengimpor ${newStudents.length} siswa dari CSV!`);
+      } catch (err) {
+        console.error(err);
+        alert("Gagal mengimpor file CSV.");
+      }
+    };
+    reader.readAsText(file);
+    if (csvInputRef.current) csvInputRef.current.value = '';
+  };
+
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    const title = `Daftar Siswa SD - ${filterClass ? 'Kelas ' + filterClass : 'Semua Kelas'}`;
+    
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(title, 14, 18);
+    
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 25);
+
+    const tableData = filteredStudents.map((s, idx) => [
+      idx + 1,
+      s.nis,
+      s.nisn || '-',
+      s.name,
+      s.class,
+      s.gender,
+      s.status === 'Pindah' ? 'Mutasi' : s.status
+    ]);
+
+    autoTable(doc, {
+      startY: 30,
+      head: [['No', 'NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'L/P', 'Status']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [79, 70, 229], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: {
+        0: { halign: 'center' },
+        4: { halign: 'center' },
+        5: { halign: 'center' },
+        6: { halign: 'center' }
+      }
+    });
+
+    doc.save(`Daftar_Siswa_${filterClass || 'Semua'}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
 
   const handleOpenModal = (student?: Student) => {
     setCurrentStudent(student ? { ...student } : { gender: 'L', status: 'Aktif', class: '1A' });
@@ -109,17 +289,33 @@ export default function StudentsList() {
             ref={fileInputRef}
             onChange={handleImport}
           />
-          <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl shadow-lg shadow-green-200/50 hover:bg-green-700 font-medium">
-            <Upload size={18} /> Import Excel
+          <input 
+            type="file" 
+            accept=".csv"
+            className="hidden" 
+            ref={csvInputRef}
+            onChange={handleCSVImport}
+          />
+          <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl shadow-lg shadow-green-200/50 hover:bg-green-700 font-medium text-sm">
+            <Upload size={16} /> Import Excel
           </button>
-          <button onClick={() => exportToExcel(filteredStudents)} className="btn-outline justify-center w-full sm:w-auto">
-            <Download size={18} /> Export
+          <button onClick={downloadCSVTemplate} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 font-medium text-sm">
+            <DownloadCloud size={16} /> Template CSV
           </button>
-          <button onClick={() => setIsPrintListMode(true)} className="btn-outline justify-center w-full sm:w-auto">
-            <Printer size={18} /> Cetak
+          <button onClick={() => csvInputRef.current?.click()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-sm">
+            <UploadCloud size={16} /> Import CSV
           </button>
-          <button onClick={() => handleOpenModal()} className="btn justify-center w-full sm:w-auto">
-            <Plus size={18} /> Tambah Siswa
+          <button onClick={() => exportToExcel(filteredStudents)} className="btn-outline justify-center w-full sm:w-auto text-sm">
+            <Download size={16} /> Export
+          </button>
+          <button onClick={() => downloadPDF()} className="btn-outline justify-center w-full sm:w-auto gap-2 text-indigo-600 border-indigo-100 hover:bg-indigo-50/50 text-sm">
+            <FileDown size={16} /> Download PDF
+          </button>
+          <button onClick={() => setIsPrintListMode(true)} className="btn-outline justify-center w-full sm:w-auto text-sm">
+            <Printer size={16} /> Cetak
+          </button>
+          <button onClick={() => handleOpenModal()} className="btn justify-center w-full sm:w-auto text-sm">
+            <Plus size={16} /> Tambah Siswa
           </button>
         </div>
       </div>
@@ -146,6 +342,20 @@ export default function StudentsList() {
             {CLASSES.map(c => <option key={c} value={c}>Kelas {c}</option>)}
           </select>
         </div>
+        <div className="relative w-full sm:w-56">
+          <ArrowUpDown className="absolute left-4 top-3.5 text-gray-400" size={20} />
+          <select 
+            className="w-full bg-white/60 backdrop-blur-lg border border-white/80 px-5 py-3 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 pl-12 appearance-none font-medium text-gray-800"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+          >
+            <option value="default">Urutkan: Default</option>
+            <option value="name-asc">Urutkan: Nama (A - Z)</option>
+            <option value="name-desc">Urutkan: Nama (Z - A)</option>
+            <option value="class-asc">Urutkan: Kelas (Terendah)</option>
+            <option value="class-desc">Urutkan: Kelas (Tertinggi)</option>
+          </select>
+        </div>
       </div>
 
       <div className="bg-white/70 backdrop-blur-2xl rounded-[2rem] border border-white/90 shadow-lg overflow-hidden flex flex-col mb-10">
@@ -162,17 +372,24 @@ export default function StudentsList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50/50">
-              {filteredStudents.length === 0 ? (
+              {sortedStudents.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-gray-500 font-medium tracking-wide">
                     Tidak ada data siswa.
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map(student => (
-                  <tr key={student.id} className="hover:bg-white/40 transition-colors group">
+                sortedStudents.map(student => (
+                  <tr 
+                    key={student.id} 
+                    className="hover:bg-indigo-50/30 transition-colors group cursor-pointer"
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('.action-btn')) return;
+                      setViewingStudent(student);
+                    }}
+                  >
                     <td className="px-6 py-4 font-mono text-gray-500">{student.nis}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{student.name}</td>
+                    <td className="px-6 py-4 font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{student.name}</td>
                     <td className="px-4 py-4 text-center">
                        <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-black">{student.class}</span>
                     </td>
@@ -180,22 +397,22 @@ export default function StudentsList() {
                        <span className="text-gray-600 font-bold">{student.gender}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={cn(
+                       <span className={cn(
                         "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap",
                         student.status === 'Aktif' ? 'bg-green-100 text-green-700' :
                         student.status === 'Lulus' ? 'bg-indigo-100 text-indigo-700' : 
                         student.status === 'Keluar' ? 'bg-rose-100 text-rose-700' : 'bg-orange-100 text-orange-700'
-                      )}>
-                        <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", 
+                       )}>
+                         <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", 
                           student.status === 'Aktif' ? 'bg-green-500' :
                           student.status === 'Lulus' ? 'bg-indigo-500' : 
                           student.status === 'Keluar' ? 'bg-rose-500' : 'bg-orange-500'
-                        )}></span>
-                        {student.status === 'Pindah' ? 'Mutasi' : student.status}
-                      </span>
+                         )}></span>
+                         {student.status === 'Pindah' ? 'Mutasi' : student.status}
+                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="action-btn flex justify-end gap-2">
                         <button onClick={() => setPrintStudent(student)} className="px-2 sm:px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold text-gray-600 shadow-sm hover:border-indigo-300 transition-colors">
                           <Printer size={16} className="sm:hidden" />
                           <span className="hidden sm:inline">Cetak</span>
@@ -219,6 +436,176 @@ export default function StudentsList() {
           </table>
         </div>
       </div>
+
+      {/* Detail Siswa Modal */}
+      {viewingStudent && (
+        <div className="fixed inset-0 bg-indigo-950/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4 overflow-y-auto">
+          <div className="bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl border border-white/50 shadow-2xl w-full max-w-2xl mt-auto transition-transform overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+            {/* Header */}
+            <div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-indigo-900 text-white sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                  <User size={20} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">Profil Lengkap Siswa</h3>
+                  <p className="text-xs text-indigo-200">Informasi detail murid</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewingStudent(null)} 
+                className="p-2 bg-white/10 hover:bg-white/25 text-white rounded-full transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 max-h-[75vh] overflow-y-auto space-y-6">
+              {/* Profile card / top summary */}
+              <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100/30">
+                {/* Photo / Avatar */}
+                <div className="w-24 h-32 rounded-xl border border-slate-200 bg-white shadow-inner flex-shrink-0 flex items-center justify-center overflow-hidden relative">
+                  {viewingStudent.fotoUrl ? (
+                    <img 
+                      src={viewingStudent.fotoUrl.replace(/\/file\/d\/(.+?)\/view.*/, '/uc?export=view&id=$1')} 
+                      alt="Foto" 
+                      className="w-full h-full object-cover" 
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span className="text-3xl font-black text-indigo-300">{viewingStudent.name ? viewingStudent.name[0] : 'S'}</span>
+                  )}
+                </div>
+                <div className="flex-1 text-center sm:text-left space-y-2">
+                  <h4 className="text-2xl font-extrabold text-indigo-900 leading-tight">{viewingStudent.name}</h4>
+                  <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">Kelas {viewingStudent.class}</span>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700">{viewingStudent.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</span>
+                    <span className={cn(
+                      "px-2.5 py-1 rounded-full text-xs font-bold",
+                      viewingStudent.status === 'Aktif' ? 'bg-green-100 text-green-700' :
+                      viewingStudent.status === 'Lulus' ? 'bg-indigo-100 text-indigo-700' :
+                      viewingStudent.status === 'Keluar' ? 'bg-rose-100 text-rose-700' : 'bg-orange-100 text-orange-700'
+                    )}>{viewingStudent.status}</span>
+                  </div>
+                  <p className="text-sm font-mono text-gray-500">NIS: {viewingStudent.nis} {viewingStudent.nisn ? `| NISN: ${viewingStudent.nisn}` : ''}</p>
+                </div>
+              </div>
+
+              {/* Bento Grid Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Detail 1 */}
+                <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 flex gap-3">
+                  <Calendar size={18} className="text-indigo-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tanggal Lahir</span>
+                    <span className="text-sm font-semibold text-gray-800">{viewingStudent.dob || '-'}</span>
+                  </div>
+                </div>
+
+                {/* Detail 2 */}
+                <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 flex gap-3">
+                  <UserCheck size={18} className="text-indigo-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nama Orang Tua</span>
+                    <span className="text-sm font-semibold text-gray-800">{viewingStudent.parentName || '-'}</span>
+                  </div>
+                </div>
+
+                {/* Detail 3 */}
+                <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 flex gap-3 sm:col-span-2">
+                  <MapPin size={18} className="text-indigo-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Alamat Tinggal</span>
+                    <span className="text-sm font-semibold text-gray-800">{viewingStudent.address || '-'}</span>
+                  </div>
+                </div>
+
+                {viewingStudent.status === 'Lulus' && (
+                  <div className="p-4 rounded-xl border border-slate-100 bg-indigo-50/20 flex gap-3 sm:col-span-2">
+                    <BookOpen size={18} className="text-indigo-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="block text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Nomor Ijazah</span>
+                      <span className="text-sm font-bold text-indigo-900">{viewingStudent.ijazahNo || '-'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Attachments & Files */}
+              <div className="space-y-3">
+                <h5 className="text-sm font-bold text-indigo-950 uppercase tracking-wider">Dokumen & Berkas</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* KK */}
+                  <div className="p-3 rounded-xl border border-slate-100 flex flex-col justify-between gap-2 bg-white">
+                    <span className="text-xs font-bold text-gray-500">Kartu Keluarga (KK)</span>
+                    {viewingStudent.kkUrl ? (
+                      <a href={viewingStudent.kkUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
+                        <Eye size={12} /> Lihat KK
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-400 font-medium italic">Tidak ada berkas</span>
+                    )}
+                  </div>
+
+                  {/* Akte */}
+                  <div className="p-3 rounded-xl border border-slate-100 flex flex-col justify-between gap-2 bg-white">
+                    <span className="text-xs font-bold text-gray-500">Akte Kelahiran</span>
+                    {viewingStudent.akteUrl ? (
+                      <a href={viewingStudent.akteUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
+                        <Eye size={12} /> Lihat Akte
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-400 font-medium italic">Tidak ada berkas</span>
+                    )}
+                  </div>
+
+                  {/* Berkas Lain */}
+                  <div className="p-3 rounded-xl border border-slate-100 flex flex-col justify-between gap-2 bg-white">
+                    <span className="text-xs font-bold text-gray-500">Berkas Pendukung</span>
+                    {viewingStudent.berkasUrl ? (
+                      <a href={viewingStudent.berkasUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
+                        <Eye size={12} /> Lihat Berkas
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-400 font-medium italic">Tidak ada berkas</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer with actions */}
+            <div className="p-4 sm:p-5 border-t border-gray-100 bg-slate-50 flex flex-wrap justify-end gap-2 sticky bottom-0 z-20">
+              <button 
+                onClick={() => {
+                  setViewingStudent(null);
+                  setPrintStudent(viewingStudent);
+                }} 
+                className="btn-outline text-sm"
+              >
+                <Printer size={16} /> Cetak Biodata
+              </button>
+              <button 
+                onClick={() => {
+                  setViewingStudent(null);
+                  handleOpenModal(viewingStudent);
+                }} 
+                className="btn-outline text-indigo-600 border-indigo-100 hover:bg-indigo-50/50 text-sm"
+              >
+                <Edit size={16} /> Edit Profil
+              </button>
+              <button 
+                onClick={() => setViewingStudent(null)} 
+                className="btn text-sm"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Add/Edit */}
       {isModalOpen && (
@@ -406,10 +793,10 @@ export default function StudentsList() {
                </tr>
              </thead>
              <tbody>
-               {filteredStudents.length === 0 ? (
+               {sortedStudents.length === 0 ? (
                  <tr><td colSpan={6} className="border border-slate-400 p-4 text-center">Tidak ada data</td></tr>
                ) : (
-                 filteredStudents.map((s, idx) => (
+                 sortedStudents.map((s, idx) => (
                    <tr key={s.id}>
                      <td className="border border-slate-400 p-2 text-center">{idx + 1}</td>
                      <td className="border border-slate-400 p-2">{s.nis} {s.nisn ? `/ ${s.nisn}` : ''}</td>

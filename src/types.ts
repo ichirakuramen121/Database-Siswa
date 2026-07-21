@@ -19,17 +19,32 @@ export interface Student {
   updatedAt: string;
 }
 
+export interface Teacher {
+  id: string;
+  nip: string;
+  name: string;
+  gender: 'L' | 'P';
+  class: string; // Walikelas kelas berapa, e.g. "1A", "None"
+  phone: string;
+  email: string;
+  status: 'Aktif' | 'Nonaktif';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Settings {
   scriptUrl: string;
   folderId?: string;
   appName?: string;
   adminUsername?: string;
   adminPassword?: string;
+  schoolLogoUrl?: string;
 }
 
 export interface AppState {
   isAuthenticated: boolean;
   students: Student[];
+  teachers: Teacher[];
   settings: Settings;
   isLoading: boolean;
   error: string | null;
@@ -40,7 +55,15 @@ export interface AppState {
   updateStudent: (id: string, data: Partial<Student>) => void;
   updateStudentsBulk: (updates: {id: string, data: Partial<Student>}[]) => void;
   deleteStudent: (id: string) => void;
+  setTeachers: (teachers: Teacher[]) => void;
+  addTeacher: (teacher: Teacher) => void;
+  updateTeacher: (id: string, data: Partial<Teacher>) => void;
+  deleteTeacher: (id: string) => void;
   setSettings: (settings: Settings) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  lastSyncedAt?: string | null;
+  isSyncingGlobal?: boolean;
+  setLastSyncedAt: (time: string | null) => void;
+  setIsSyncingGlobal: (syncing: boolean) => void;
 }

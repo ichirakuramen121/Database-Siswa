@@ -34,8 +34,12 @@ export default function Login() {
         {/* Konten Selamat Datang (Sisi Kiri di Desktop) */}
         <div className="hidden md:flex md:w-1/2 bg-indigo-600 text-white p-10 flex-col justify-between relative overflow-hidden">
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-8 border border-white/30">
-              <Users className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-8 border border-white/30 overflow-hidden">
+              {settings?.schoolLogoUrl ? (
+                <img src={settings.schoolLogoUrl} alt="Logo" className="w-full h-full object-cover bg-white" referrerPolicy="no-referrer" />
+              ) : (
+                <Users className="w-8 h-8 text-white" />
+              )}
             </div>
             <h1 className="text-4xl font-black mb-4 tracking-tight leading-tight">Selamat Datang di<br/>{appName}</h1>
             <p className="text-indigo-100/80 text-lg leading-relaxed">
@@ -58,8 +62,12 @@ export default function Login() {
         {/* Form Login (Sisi Kanan di Desktop) */}
         <div className="w-full md:w-1/2 p-6 sm:p-10 flex flex-col justify-center">
           <div className="flex flex-col items-center justify-center mb-8 md:hidden">
-            <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 mb-4">
-              <Users className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 mb-4 overflow-hidden">
+              {settings?.schoolLogoUrl ? (
+                <img src={settings.schoolLogoUrl} alt="Logo" className="w-full h-full object-cover bg-white" referrerPolicy="no-referrer" />
+              ) : (
+                <Users className="w-8 h-8 text-white" />
+              )}
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-indigo-900">{appName}</h1>
             <p className="text-sm text-gray-500 font-medium mt-1">Sistem Informasi Siswa</p>

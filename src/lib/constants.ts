@@ -8,22 +8,44 @@ export const GAS_TEMPLATE = `// CODE UNTUK GOOGLE APPS SCRIPT (Code.gs)
 // 7. Siapa yang memiliki akses: "Siapa saja" (Anyone)
 // 8. Copy URL Web App yang dihasilkan dan paste di pengaturan aplikasi ini.
 
-const SHEET_NAME = "DataSiswa";
+const SHEET_SISWA = "DataSiswa";
+const SHEET_GURU = "DataGuru";
 
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow([
+  
+  // Setup DataSiswa Sheet
+  let sheetSiswa = ss.getSheetByName(SHEET_SISWA);
+  if (!sheetSiswa) {
+    sheetSiswa = ss.insertSheet(SHEET_SISWA);
+    sheetSiswa.appendRow([
       "id", "nis", "nisn", "name", "class", "gender", "dob", "address", 
       "parentName", "status", "ijazahNo", "ijazahUrl", "berkasUrl", 
       "kkUrl", "akteUrl", "fotoUrl",
       "createdAt", "updatedAt"
     ]);
-    sheet.getRange(1, 1, 1, 18).setFontWeight("bold");
-    sheet.setFrozenRows(1);
+    sheetSiswa.getRange(1, 1, 1, 18).setFontWeight("bold");
+    sheetSiswa.setFrozenRows(1);
   }
+  
+  // Setup DataGuru Sheet
+  let sheetGuru = ss.getSheetByName(SHEET_GURU);
+  if (!sheetGuru) {
+    sheetGuru = ss.insertSheet(SHEET_GURU);
+    sheetGuru.appendRow([
+      "id", "nip", "name", "gender", "class", "phone", "email", "status", "createdAt", "updatedAt"
+    ]);
+    sheetGuru.getRange(1, 1, 1, 10).setFontWeight("bold");
+    sheetGuru.setFrozenRows(1);
+  }
+
+  // Hapus default "Sheet1" jika ada dan kita punya sheet kita sendiri
+  try {
+    const defaultSheet = ss.getSheetByName("Sheet1");
+    if (defaultSheet && ss.getSheets().length > 1) {
+      ss.deleteSheet(defaultSheet);
+    }
+  } catch(e) {}
   
   // Memancing agar Google meminta izin akses Google Drive saat setup() dijalankan
   try {
@@ -40,52 +62,95 @@ function doPost(e) {
     }
     
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName(SHEET_NAME);
-    if(!sheet) {
+    
+    // Auto Setup jika sheet belum lengkap
+    let sheetSiswa = ss.getSheetByName(SHEET_SISWA);
+    let sheetGuru = ss.getSheetByName(SHEET_GURU);
+    if (!sheetSiswa || !sheetGuru) {
       setup();
-      sheet = ss.getSheetByName(SHEET_NAME);
+      sheetSiswa = ss.getSheetByName(SHEET_SISWA);
+      sheetGuru = ss.getSheetByName(SHEET_GURU);
+    }
+
+    if (payload.action === "setup") {
+      setup();
+      return jsonResponse({ success: true, message: "Database dan semua sheet berhasil dibuat otomatis!" });
     }
 
     if (payload.action === "sync") {
-      // Sync all data from app to sheet (overwrite sheet with app data for simplicity if needed,
-      // or we can just append/update. Let's do a full sync / replace for simplicity in this demo)
-      
+      // Sync students
       const records = payload.data; // Array of student objects
-      
-      // Clear existing, keeping headers
-      if (sheet.getLastRow() > 1) {
-        sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+      if (records) {
+        // Kosongkan baris lama (sisakan header)
+        if (sheetSiswa.getLastRow() > 1) {
+          sheetSiswa.getRange(2, 1, sheetSiswa.getLastRow() - 1, sheetSiswa.getLastColumn()).clearContent();
+        }
+        if (records.length > 0) {
+          const rows = records.map(s => [
+            s.id || "", s.nis || "", s.nisn || "", s.name || "", s.class || "", s.gender || "", 
+            s.dob || "", s.address || "", s.parentName || "", s.status || "", 
+            s.ijazahNo || "", s.ijazahUrl || "", s.berkasUrl || "", 
+            s.kkUrl || "", s.akteUrl || "", s.fotoUrl || "",
+            s.createdAt || "", s.updatedAt || ""
+          ]);
+          sheetSiswa.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+        }
       }
-      
-      if (records && records.length > 0) {
-        const rows = records.map(s => [
-          s.id || "", s.nis || "", s.nisn || "", s.name || "", s.class || "", s.gender || "", 
-          s.dob || "", s.address || "", s.parentName || "", s.status || "", 
-          s.ijazahNo || "", s.ijazahUrl || "", s.berkasUrl || "", 
-          s.kkUrl || "", s.akteUrl || "", s.fotoUrl || "",
-          s.createdAt || "", s.updatedAt || ""
-        ]);
-        sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+
+      // Sync teachers jika dikirim
+      const teachers = payload.teachers;
+      if (teachers) {
+        if (sheetGuru.getLastRow() > 1) {
+          sheetGuru.getRange(2, 1, sheetGuru.getLastRow() - 1, sheetGuru.getLastColumn()).clearContent();
+        }
+        if (teachers.length > 0) {
+          const rows = teachers.map(t => [
+            t.id || "", t.nip || "", t.name || "", t.gender || "", t.class || "", 
+            t.phone || "", t.email || "", t.status || "", t.createdAt || "", t.updatedAt || ""
+          ]);
+          sheetGuru.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+        }
       }
-      return jsonResponse({ success: true, message: "Data synced successfully" });
+
+      return jsonResponse({ success: true, message: "Data berhasil disinkronkan ke Google Sheets" });
     }
 
     if (payload.action === "pull") {
-      const data = sheet.getDataRange().getValues();
-      if (data.length <= 1) return jsonResponse({ data: [] });
-      
-      const headers = data[0];
-      const records = [];
-      
-      for (let i = 1; i < data.length; i++) {
-          let row = data[i];
+      // Ambil data siswa
+      const siswaData = sheetSiswa.getDataRange().getValues();
+      const students = [];
+      if (siswaData.length > 1) {
+        const headers = siswaData[0];
+        for (let i = 1; i < siswaData.length; i++) {
+          let row = siswaData[i];
           let obj = {};
           for (let j = 0; j < headers.length; j++) {
-             obj[headers[j]] = row[j];
+            obj[headers[j]] = row[j];
           }
-          records.push(obj);
+          students.push(obj);
+        }
       }
-      return jsonResponse({ data: records });
+
+      // Ambil data guru
+      const guruData = sheetGuru.getDataRange().getValues();
+      const teachers = [];
+      if (guruData.length > 1) {
+        const headers = guruData[0];
+        for (let i = 1; i < guruData.length; i++) {
+          let row = guruData[i];
+          let obj = {};
+          for (let j = 0; j < headers.length; j++) {
+            obj[headers[j]] = row[j];
+          }
+          teachers.push(obj);
+        }
+      }
+
+      return jsonResponse({ 
+        data: students, 
+        students: students, 
+        teachers: teachers 
+      });
     }
 
   } catch (error) {
@@ -96,29 +161,51 @@ function doPost(e) {
 function doGet(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName(SHEET_NAME);
-    if(!sheet) {
+    let sheetSiswa = ss.getSheetByName(SHEET_SISWA);
+    let sheetGuru = ss.getSheetByName(SHEET_GURU);
+    if (!sheetSiswa || !sheetGuru) {
       setup();
-      return jsonResponse({ data: [] });
+      sheetSiswa = ss.getSheetByName(SHEET_SISWA);
+      sheetGuru = ss.getSheetByName(SHEET_GURU);
     }
     
-    const data = sheet.getDataRange().getValues();
-    if (data.length <= 1) return jsonResponse({ data: [] });
-    
-    const headers = data[0];
-    const records = [];
-    
-    for (let i = 1; i < data.length; i++) {
-        let row = data[i];
+    // Ambil data siswa
+    const siswaData = sheetSiswa.getDataRange().getValues();
+    const students = [];
+    if (siswaData.length > 1) {
+      const headers = siswaData[0];
+      for (let i = 1; i < siswaData.length; i++) {
+        let row = siswaData[i];
         let obj = {};
         for (let j = 0; j < headers.length; j++) {
-           obj[headers[j]] = row[j];
+          obj[headers[j]] = row[j];
         }
-        records.push(obj);
+        students.push(obj);
+      }
     }
-    return jsonResponse({ data: records });
+
+    // Ambil data guru
+    const guruData = sheetGuru.getDataRange().getValues();
+    const teachers = [];
+    if (guruData.length > 1) {
+      const headers = guruData[0];
+      for (let i = 1; i < guruData.length; i++) {
+        let row = guruData[i];
+        let obj = {};
+        for (let j = 0; j < headers.length; j++) {
+          obj[headers[j]] = row[j];
+        }
+        teachers.push(obj);
+      }
+    }
+
+    return jsonResponse({ 
+      data: students, 
+      students: students, 
+      teachers: teachers 
+    });
   } catch(err) {
-      return jsonResponse({ error: err.toString() });
+    return jsonResponse({ error: err.toString() });
   }
 }
 
@@ -126,7 +213,6 @@ function handleUpload(payload) {
   try {
     let folder;
     if (payload.folderId) {
-      // Menangani error jika Folder ID salah
       try {
         folder = DriveApp.getFolderById(payload.folderId);
       } catch (e) {
@@ -143,7 +229,6 @@ function handleUpload(payload) {
       }
     }
     
-    // Pastikan folder ada sebelum membuat file
     if (!folder) {
       return jsonResponse({ error: "Gagal mendapatkan atau membuat folder upload." });
     }
@@ -151,7 +236,6 @@ function handleUpload(payload) {
     const blob = Utilities.newBlob(Utilities.base64Decode(payload.base64), payload.mimeType, payload.filename);
     const file = folder.createFile(blob);
     
-    // Allow anyone to view
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     
     return jsonResponse({ success: true, url: file.getUrl() });
