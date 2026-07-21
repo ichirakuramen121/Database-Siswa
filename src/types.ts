@@ -9,6 +9,9 @@ export interface Student {
   address: string;
   parentName: string;
   status: 'Aktif' | 'Lulus' | 'Pindah' | 'Keluar';
+  sekolahAsal?: string;
+  sekolahTujuan?: string;
+  tanggalMutasi?: string;
   ijazahNo?: string;
   ijazahUrl?: string;
   berkasUrl?: string;

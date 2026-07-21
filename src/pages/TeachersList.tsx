@@ -389,44 +389,44 @@ export default function TeachersList() {
       {/* Teachers List Card */}
       <div className="bg-white/70 backdrop-blur-md rounded-3xl border border-white/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse border border-indigo-100">
             <thead>
-              <tr className="border-b border-indigo-50 bg-indigo-50/40 text-xs font-bold text-indigo-900 uppercase tracking-wider">
-                <th className="p-4 text-center w-12">No</th>
-                <th className="p-4 cursor-pointer hover:bg-indigo-50 transition" onClick={() => toggleSort('nip')}>
+              <tr className="border-b border-indigo-100 bg-indigo-50/40 text-xs font-bold text-indigo-900 uppercase tracking-wider">
+                <th className="p-4 text-center w-12 border border-indigo-100">No</th>
+                <th className="p-4 cursor-pointer hover:bg-indigo-50 transition border border-indigo-100" onClick={() => toggleSort('nip')}>
                   NIP {sortBy === 'nip' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
-                <th className="p-4 cursor-pointer hover:bg-indigo-50 transition" onClick={() => toggleSort('name')}>
+                <th className="p-4 cursor-pointer hover:bg-indigo-50 transition border border-indigo-100" onClick={() => toggleSort('name')}>
                   Nama Lengkap {sortBy === 'name' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
-                <th className="p-4">Jenis Kelamin</th>
-                <th className="p-4 cursor-pointer hover:bg-indigo-50 transition" onClick={() => toggleSort('class')}>
+                <th className="p-4 border border-indigo-100">Jenis Kelamin</th>
+                <th className="p-4 cursor-pointer hover:bg-indigo-50 transition border border-indigo-100" onClick={() => toggleSort('class')}>
                   Wali Kelas {sortBy === 'class' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
-                <th className="p-4">Kontak</th>
-                <th className="p-4 text-center">Status</th>
-                <th className="p-4 text-center w-28">Aksi</th>
+                <th className="p-4 border border-indigo-100">Kontak</th>
+                <th className="p-4 text-center border border-indigo-100">Status</th>
+                <th className="p-4 text-center w-28 border border-indigo-100">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-indigo-50/50 text-sm">
+            <tbody className="divide-y divide-indigo-50 text-sm">
               {sortedTeachers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-gray-500 font-medium">
+                  <td colSpan={8} className="p-8 text-center text-gray-500 font-medium border border-indigo-100">
                     Tidak ada data guru yang ditemukan
                   </td>
                 </tr>
               ) : (
                 sortedTeachers.map((t, idx) => (
                   <tr key={t.id} className="hover:bg-white/40 transition">
-                    <td className="p-4 text-center font-semibold text-gray-400">{idx + 1}</td>
-                    <td className="p-4 font-mono font-medium text-gray-600">{t.nip || '-'}</td>
-                    <td className="p-4 font-bold text-gray-900">{t.name}</td>
-                    <td className="p-4 text-gray-600">
+                    <td className="p-4 text-center font-semibold text-gray-400 border border-indigo-100">{idx + 1}</td>
+                    <td className="p-4 font-mono font-medium text-gray-600 border border-indigo-100">{t.nip || '-'}</td>
+                    <td className="p-4 font-bold text-gray-900 border border-indigo-100">{t.name}</td>
+                    <td className="p-4 text-gray-600 border border-indigo-100">
                       <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
                         {t.gender === 'L' ? 'Laki-laki (L)' : 'Perempuan (P)'}
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 border border-indigo-100">
                       {t.class === 'None' ? (
                         <span className="text-gray-400 italic text-xs">Guru Mapel / Lainnya</span>
                       ) : (
@@ -435,7 +435,7 @@ export default function TeachersList() {
                         </span>
                       )}
                     </td>
-                    <td className="p-4 space-y-1 text-xs">
+                    <td className="p-4 space-y-1 text-xs border border-indigo-100">
                       {t.phone && (
                         <div className="flex items-center gap-1 text-gray-600 font-medium">
                           <Phone size={12} className="text-indigo-400" />
@@ -450,7 +450,7 @@ export default function TeachersList() {
                       )}
                       {!t.phone && !t.email && <span className="text-gray-400">-</span>}
                     </td>
-                    <td className="p-4 text-center">
+                    <td className="p-4 text-center border border-indigo-100">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
                         t.status === 'Aktif' 
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
@@ -469,7 +469,7 @@ export default function TeachersList() {
                         )}
                       </span>
                     </td>
-                    <td className="p-4 text-center">
+                    <td className="p-4 text-center border border-indigo-100">
                       <div className="flex justify-center items-center gap-2">
                         <button 
                           onClick={() => handleOpenEditModal(t)}

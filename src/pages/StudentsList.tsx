@@ -7,12 +7,16 @@ import {
   ArrowUpDown, FileSpreadsheet, Eye, BookOpen, User, Calendar, MapPin, UserCheck, DownloadCloud, UploadCloud
 } from 'lucide-react';
 import { exportToExcel, importFromExcel } from '../lib/excel';
-import { uploadFileToGAS } from '../lib/api';
+import { uploadFileToGAS, fetchFromGAS } from '../lib/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function StudentsList() {
-  const { students, addStudent, updateStudent, deleteStudent, settings } = useStore();
+  const { 
+    students, addStudent, updateStudent, deleteStudent, settings,
+    setLoading, setIsSyncingGlobal, setLastSyncedAt 
+  } = useStore();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [sortBy, setSortBy] = useState<'default' | 'name-asc' | 'name-desc' | 'class-asc' | 'class-desc'>('default');
@@ -24,6 +28,26 @@ export default function StudentsList() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync to sheets immediately when data is changed
+  const triggerSync = async (updatedStudents: Student[]) => {
+    if (!settings.scriptUrl) return;
+    try {
+      setLoading(true);
+      setIsSyncingGlobal(true);
+      await fetchFromGAS(settings.scriptUrl, {
+        action: 'sync',
+        data: updatedStudents,
+        teachers: useStore.getState().teachers
+      });
+      setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+    } catch (e) {
+      console.error("Auto sync students failed:", e);
+    } finally {
+      setLoading(false);
+      setIsSyncingGlobal(false);
+    }
+  };
 
   // Derived filtered & sorted data
   const filteredStudents = students.filter(s => {
@@ -77,7 +101,7 @@ export default function StudentsList() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const text = event.target?.result as string;
         const lines = text.split(/\r?\n/);
@@ -158,6 +182,8 @@ export default function StudentsList() {
         }
 
         newStudents.forEach(s => addStudent(s));
+        const currentStudents = useStore.getState().students;
+        await triggerSync(currentStudents);
         alert(`Berhasil mengimpor ${newStudents.length} siswa dari CSV!`);
       } catch (err) {
         console.error(err);
@@ -231,6 +257,9 @@ export default function StudentsList() {
       });
     }
     setIsModalOpen(false);
+    
+    const currentStudents = useStore.getState().students;
+    await triggerSync(currentStudents);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'kk' | 'akte' | 'foto') => {
@@ -267,6 +296,9 @@ export default function StudentsList() {
         } as Student);
       });
       alert(`Berhasil mengimport ${newStudents.length} siswa`);
+      
+      const currentStudents = useStore.getState().students;
+      await triggerSync(currentStudents);
     } catch (err) {
       alert("Gagal import");
     }
@@ -360,21 +392,21 @@ export default function StudentsList() {
 
       <div className="bg-white/70 backdrop-blur-2xl rounded-[2rem] border border-white/90 shadow-lg overflow-hidden flex flex-col mb-10">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-collapse min-w-[700px]">
-            <thead className="bg-white/90 backdrop-blur-sm z-10 sticky top-0">
-              <tr className="text-gray-400 text-[11px] uppercase tracking-widest border-b border-gray-100">
-                <th className="px-6 py-4 font-bold">NIS</th>
-                <th className="px-6 py-4 font-bold">Nama Lengkap</th>
-                <th className="px-4 py-4 font-bold text-center">Kelas</th>
-                <th className="px-4 py-4 font-bold text-center">L/P</th>
-                <th className="px-6 py-4 font-bold">Status</th>
-                <th className="px-6 py-4 font-bold text-right">Aksi</th>
+          <table className="w-full text-sm text-left border-collapse min-w-[700px] border border-indigo-100">
+            <thead className="bg-indigo-50/50 z-10 sticky top-0">
+              <tr className="text-indigo-900 text-[11px] uppercase tracking-widest border-b border-indigo-100">
+                <th className="px-6 py-4 font-bold border border-indigo-100 text-indigo-900">NIS</th>
+                <th className="px-6 py-4 font-bold border border-indigo-100 text-indigo-900">Nama Lengkap</th>
+                <th className="px-4 py-4 font-bold text-center border border-indigo-100 text-indigo-900">Kelas</th>
+                <th className="px-4 py-4 font-bold text-center border border-indigo-100 text-indigo-900">L/P</th>
+                <th className="px-6 py-4 font-bold border border-indigo-100 text-indigo-900">Status</th>
+                <th className="px-6 py-4 font-bold text-right border border-indigo-100 text-indigo-900">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50/50">
+            <tbody className="divide-y divide-indigo-50/50">
               {sortedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500 font-medium tracking-wide">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500 font-medium tracking-wide border border-indigo-100">
                     Tidak ada data siswa.
                   </td>
                 </tr>
@@ -388,15 +420,15 @@ export default function StudentsList() {
                       setViewingStudent(student);
                     }}
                   >
-                    <td className="px-6 py-4 font-mono text-gray-500">{student.nis}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{student.name}</td>
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-6 py-4 font-mono text-gray-500 border border-indigo-100">{student.nis}</td>
+                    <td className="px-6 py-4 font-bold text-gray-900 group-hover:text-indigo-600 transition-colors border border-indigo-100">{student.name}</td>
+                    <td className="px-4 py-4 text-center border border-indigo-100">
                        <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-black">{student.class}</span>
                     </td>
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-4 py-4 text-center border border-indigo-100">
                        <span className="text-gray-600 font-bold">{student.gender}</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 border border-indigo-100">
                        <span className={cn(
                         "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap",
                         student.status === 'Aktif' ? 'bg-green-100 text-green-700' :
@@ -411,7 +443,7 @@ export default function StudentsList() {
                          {student.status === 'Pindah' ? 'Mutasi' : student.status}
                        </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right border border-indigo-100">
                       <div className="action-btn flex justify-end gap-2">
                         <button onClick={() => setPrintStudent(student)} className="px-2 sm:px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold text-gray-600 shadow-sm hover:border-indigo-300 transition-colors">
                           <Printer size={16} className="sm:hidden" />
@@ -421,8 +453,12 @@ export default function StudentsList() {
                           <Edit size={16} className="sm:hidden" />
                           <span className="hidden sm:inline">Edit</span>
                         </button>
-                        <button onClick={() => {
-                          if(confirm('Yakin ingin menghapus?')) deleteStudent(student.id);
+                        <button onClick={async () => {
+                          if (window.confirm('Yakin ingin menghapus?')) {
+                            deleteStudent(student.id);
+                            const currentStudents = useStore.getState().students;
+                            await triggerSync(currentStudents);
+                          }
                         }} className="px-2 sm:px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold text-rose-600 shadow-sm hover:bg-rose-50 transition-colors">
                           <Trash2 size={16} className="sm:hidden" />
                           <span className="hidden sm:inline">Hapus</span>
