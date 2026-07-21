@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store';
 import { Student } from '../types';
-import { CLASSES, STATUSES, generateId, cn } from '../lib/utils';
+import { CLASSES, STATUSES, generateId, cn, formatDate, formatAge } from '../lib/utils';
 import { 
   Search, Plus, Filter, Download, Upload, Edit, Trash2, Printer, X, FileDown,
   ArrowUpDown, FileSpreadsheet, Eye, BookOpen, User, Calendar, MapPin, UserCheck, DownloadCloud, UploadCloud
@@ -555,7 +555,10 @@ export default function StudentsList() {
                   <Calendar size={18} className="text-indigo-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tanggal Lahir</span>
-                    <span className="text-sm font-semibold text-gray-800">{viewingStudent.dob || '-'}</span>
+                    <span className="text-sm font-semibold text-gray-800">{formatDate(viewingStudent.dob)}</span>
+                    {viewingStudent.dob && (
+                      <span className="block text-xs text-indigo-600 font-semibold mt-1">Usia: {formatAge(viewingStudent.dob)}</span>
+                    )}
                   </div>
                 </div>
 
@@ -784,7 +787,7 @@ export default function StudentsList() {
                   <tr><td className="py-1 sm:py-2 font-semibold">Nama Lengkap</td><td className="py-1 sm:py-2">: {printStudent.name}</td></tr>
                   <tr><td className="py-1 sm:py-2 font-semibold">Kelas</td><td className="py-1 sm:py-2">: {printStudent.class}</td></tr>
                   <tr><td className="py-1 sm:py-2 font-semibold">Jenis Kelamin</td><td className="py-1 sm:py-2">: {printStudent.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</td></tr>
-                  <tr><td className="py-1 sm:py-2 font-semibold">Tanggal Lahir</td><td className="py-1 sm:py-2">: {printStudent.dob}</td></tr>
+                  <tr><td className="py-1 sm:py-2 font-semibold">Tanggal Lahir</td><td className="py-1 sm:py-2">: {formatDate(printStudent.dob)} {printStudent.dob && `(Usia: ${formatAge(printStudent.dob)})`}</td></tr>
                   <tr><td className="py-1 sm:py-2 font-semibold">Nama Orang Tua</td><td className="py-1 sm:py-2">: {printStudent.parentName}</td></tr>
                   <tr><td className="py-1 sm:py-2 font-semibold align-top">Alamat</td><td className="py-1 sm:py-2">: {printStudent.address}</td></tr>
                   <tr><td className="py-1 sm:py-2 font-semibold">Status</td><td className="py-1 sm:py-2">: {printStudent.status}</td></tr>

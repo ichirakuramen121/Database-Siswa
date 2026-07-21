@@ -3,9 +3,13 @@ import { useStore } from '../store';
 import { CLASSES, cn } from '../lib/utils';
 import { Student } from '../types';
 import { Users, ArrowUpCircle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { fetchFromGAS } from '../lib/api';
 
 export default function KenaikanKelas() {
-  const { students, updateStudentsBulk } = useStore();
+  const { 
+    students, updateStudentsBulk, settings, setLoading, 
+    setIsSyncingGlobal, setLastSyncedAt 
+  } = useStore();
   const [selectedClass, setSelectedClass] = useState<string>(CLASSES[0]);
   
   // Only active students in the selected class
@@ -31,7 +35,26 @@ export default function KenaikanKelas() {
     }
   }, [selectedClass]);
 
-  const handlePromoteAll = () => {
+  const triggerSync = async (updatedStudents: Student[]) => {
+    if (!settings.scriptUrl) return;
+    try {
+      setLoading(true);
+      setIsSyncingGlobal(true);
+      await fetchFromGAS(settings.scriptUrl, {
+        action: 'sync',
+        data: updatedStudents,
+        teachers: useStore.getState().teachers,
+      });
+      setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+    } catch (e) {
+      console.error("Manual sync failed in promotion:", e);
+    } finally {
+      setLoading(false);
+      setIsSyncingGlobal(false);
+    }
+  };
+
+  const handlePromoteAll = async () => {
     if (classStudents.length === 0) {
       alert('Tidak ada siswa di kelas ini.');
       return;
@@ -51,6 +74,9 @@ export default function KenaikanKelas() {
       });
       
       updateStudentsBulk(updates);
+      
+      const currentStudents = useStore.getState().students;
+      await triggerSync(currentStudents);
       alert('Berhasil diproses!');
     }
   };

@@ -19,6 +19,14 @@
 }
 
 @media print {
+  html, body, #root, .h-screen, .flex-1, [class*="overflow-"] {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+    background: none !important;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -27,17 +35,18 @@
     visibility: visible;
   }
   #printable-area, .printable-container {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: visible !important;
     bottom: auto !important;
     right: auto !important;
     height: auto !important;
     max-height: none !important;
+    background: white !important;
   }
   ::-webkit-scrollbar {
     display: none !important;
