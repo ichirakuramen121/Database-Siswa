@@ -20,11 +20,11 @@ function setup() {
     sheetSiswa = ss.insertSheet(SHEET_SISWA);
     sheetSiswa.appendRow([
       "id", "nis", "nisn", "name", "class", "gender", "dob", "address", 
-      "parentName", "status", "ijazahNo", "ijazahUrl", "berkasUrl", 
+      "parentName", "status", "sekolahAsal", "sekolahTujuan", "tanggalMutasi", "ijazahNo", "ijazahUrl", "berkasUrl", 
       "kkUrl", "akteUrl", "fotoUrl",
       "createdAt", "updatedAt"
     ]);
-    sheetSiswa.getRange(1, 1, 1, 18).setFontWeight("bold");
+    sheetSiswa.getRange(1, 1, 1, 21).setFontWeight("bold");
     sheetSiswa.setFrozenRows(1);
   }
   
@@ -89,6 +89,7 @@ function doPost(e) {
           const rows = records.map(s => [
             s.id || "", s.nis || "", s.nisn || "", s.name || "", s.class || "", s.gender || "", 
             s.dob || "", s.address || "", s.parentName || "", s.status || "", 
+            s.sekolahAsal || "", s.sekolahTujuan || "", s.tanggalMutasi || "",
             s.ijazahNo || "", s.ijazahUrl || "", s.berkasUrl || "", 
             s.kkUrl || "", s.akteUrl || "", s.fotoUrl || "",
             s.createdAt || "", s.updatedAt || ""

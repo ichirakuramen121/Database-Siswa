@@ -23,6 +23,23 @@ export const exportToExcel = (students: Student[], filename: string = 'data-sisw
   XLSX.writeFile(wb, filename);
 };
 
+export const exportTeachersToExcel = (teachers: any[], filename: string = 'data-guru.xlsx') => {
+  const ws = XLSX.utils.json_to_sheet(teachers.map((t, idx) => ({
+    "No": idx + 1,
+    "NIP": t.nip || '-',
+    "Nama Lengkap": t.name,
+    "L/P": t.gender,
+    "Wali Kelas": t.class === 'None' ? '-' : t.class,
+    "No Telepon": t.phone || '-',
+    "Email": t.email || '-',
+    "Status": t.status,
+  })));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Data Guru");
+  XLSX.writeFile(wb, filename);
+};
+
 export const importFromExcel = (file: File): Promise<Partial<Student>[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

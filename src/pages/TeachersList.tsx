@@ -4,9 +4,10 @@ import { Teacher } from '../types';
 import { 
   Search, Plus, Edit2, Trash2, X, Save, Filter, 
   GraduationCap, Phone, Mail, CheckCircle2, XCircle, Users,
-  DownloadCloud, UploadCloud
+  DownloadCloud, UploadCloud, FileSpreadsheet
 } from 'lucide-react';
 import { fetchFromGAS } from '../lib/api';
+import { exportTeachersToExcel } from '../lib/excel';
 
 export default function TeachersList() {
   const { teachers, settings, addTeacher, updateTeacher, deleteTeacher, setLoading, setIsSyncingGlobal } = useStore();
@@ -239,9 +240,9 @@ export default function TeachersList() {
 
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Apakah Anda yakin ingin menghapus data guru "${name}"?`)) {
+      const updated = teachers.filter(t => t.id !== id);
       deleteTeacher(id);
-      const currentTeachers = useStore.getState().teachers;
-      await triggerSync(currentTeachers);
+      await triggerSync(updated);
     }
   };
 
@@ -326,6 +327,12 @@ export default function TeachersList() {
             className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-sm transition active:scale-95 duration-150"
           >
             <UploadCloud size={16} /> Import CSV
+          </button>
+          <button 
+            onClick={() => exportTeachersToExcel(filteredTeachers, `Daftar_Guru_${new Date().toISOString().slice(0, 10)}.xlsx`)} 
+            className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 font-medium text-sm transition active:scale-95 duration-150"
+          >
+            <FileSpreadsheet size={16} /> Export ke Excel
           </button>
           <button 
             onClick={handleOpenAddModal}

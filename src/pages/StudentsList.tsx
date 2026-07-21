@@ -337,8 +337,8 @@ export default function StudentsList() {
           <button onClick={() => csvInputRef.current?.click()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-sm">
             <UploadCloud size={16} /> Import CSV
           </button>
-          <button onClick={() => exportToExcel(filteredStudents)} className="btn-outline justify-center w-full sm:w-auto text-sm">
-            <Download size={16} /> Export
+          <button onClick={() => exportToExcel(filteredStudents, `Daftar_Siswa_dengan_NISN_${new Date().toISOString().slice(0, 10)}.xlsx`)} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 font-medium text-sm transition active:scale-95 duration-150">
+            <FileSpreadsheet size={16} /> Export ke Excel
           </button>
           <button onClick={() => downloadPDF()} className="btn-outline justify-center w-full sm:w-auto gap-2 text-indigo-600 border-indigo-100 hover:bg-indigo-50/50 text-sm">
             <FileDown size={16} /> Download PDF
@@ -395,7 +395,7 @@ export default function StudentsList() {
           <table className="w-full text-sm text-left border-collapse min-w-[700px] border border-indigo-100">
             <thead className="bg-indigo-50/50 z-10 sticky top-0">
               <tr className="text-indigo-900 text-[11px] uppercase tracking-widest border-b border-indigo-100">
-                <th className="px-6 py-4 font-bold border border-indigo-100 text-indigo-900">NIS</th>
+                <th className="px-6 py-4 font-bold border border-indigo-100 text-indigo-900">NIS / NISN</th>
                 <th className="px-6 py-4 font-bold border border-indigo-100 text-indigo-900">Nama Lengkap</th>
                 <th className="px-4 py-4 font-bold text-center border border-indigo-100 text-indigo-900">Kelas</th>
                 <th className="px-4 py-4 font-bold text-center border border-indigo-100 text-indigo-900">L/P</th>
@@ -420,7 +420,10 @@ export default function StudentsList() {
                       setViewingStudent(student);
                     }}
                   >
-                    <td className="px-6 py-4 font-mono text-gray-500 border border-indigo-100">{student.nis}</td>
+                    <td className="px-6 py-4 font-mono text-gray-500 border border-indigo-100">
+                      <div>{student.nis}</div>
+                      {student.nisn && <div className="text-xs text-gray-400">{student.nisn}</div>}
+                    </td>
                     <td className="px-6 py-4 font-bold text-gray-900 group-hover:text-indigo-600 transition-colors border border-indigo-100">{student.name}</td>
                     <td className="px-4 py-4 text-center border border-indigo-100">
                        <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-black">{student.class}</span>
@@ -445,21 +448,37 @@ export default function StudentsList() {
                     </td>
                     <td className="px-6 py-4 text-right border border-indigo-100">
                       <div className="action-btn flex justify-end gap-2">
-                        <button onClick={() => setPrintStudent(student)} className="px-2 sm:px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold text-gray-600 shadow-sm hover:border-indigo-300 transition-colors">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPrintStudent(student);
+                          }} 
+                          className="px-2 sm:px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold text-gray-600 shadow-sm hover:border-indigo-300 transition-colors"
+                        >
                           <Printer size={16} className="sm:hidden" />
                           <span className="hidden sm:inline">Cetak</span>
                         </button>
-                        <button onClick={() => handleOpenModal(student)} className="px-2 sm:px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 transition-colors">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenModal(student);
+                          }} 
+                          className="px-2 sm:px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 transition-colors"
+                        >
                           <Edit size={16} className="sm:hidden" />
                           <span className="hidden sm:inline">Edit</span>
                         </button>
-                        <button onClick={async () => {
-                          if (window.confirm('Yakin ingin menghapus?')) {
-                            deleteStudent(student.id);
-                            const currentStudents = useStore.getState().students;
-                            await triggerSync(currentStudents);
-                          }
-                        }} className="px-2 sm:px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold text-rose-600 shadow-sm hover:bg-rose-50 transition-colors">
+                        <button 
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Yakin ingin menghapus?')) {
+                              const updated = students.filter(s => s.id !== student.id);
+                              deleteStudent(student.id);
+                              await triggerSync(updated);
+                            }
+                          }} 
+                          className="px-2 sm:px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-xs font-semibold text-rose-600 shadow-sm hover:bg-rose-50 transition-colors"
+                        >
                           <Trash2 size={16} className="sm:hidden" />
                           <span className="hidden sm:inline">Hapus</span>
                         </button>
