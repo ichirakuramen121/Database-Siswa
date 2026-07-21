@@ -21,6 +21,28 @@ function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // Load settings from server on mount
+  useEffect(() => {
+    const loadServerSettings = async () => {
+      try {
+        const response = await fetch('/api/settings');
+        if (response.ok) {
+          const serverSettings = await response.json();
+          if (serverSettings && serverSettings.scriptUrl) {
+            setSettings({
+              ...useStore.getState().settings,
+              ...serverSettings
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load settings from server:", e);
+      }
+    };
+    loadServerSettings();
+  }, [setSettings]);
+
+  // Handle share configuration from query param
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const configParam = params.get('config');
@@ -28,12 +50,25 @@ function App() {
       try {
         const parsedConfig = JSON.parse(atob(decodeURIComponent(configParam)));
         if (parsedConfig.scriptUrl) {
-          setSettings({
+          const newSettings = {
             ...settings,
             scriptUrl: parsedConfig.scriptUrl,
             folderId: parsedConfig.folderId || settings.folderId,
-            appName: parsedConfig.appName || settings.appName
-          });
+            appName: parsedConfig.appName || settings.appName,
+            adminUsername: parsedConfig.adminUsername || settings.adminUsername,
+            adminPassword: parsedConfig.adminPassword || settings.adminPassword,
+          };
+          setSettings(newSettings);
+          
+          // Also persist this newly scanned config to the server
+          fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newSettings),
+          }).catch((err) => console.error("Failed to persist shared config on server:", err));
+
           alert('Konfigurasi sinkronisasi berhasil ditambahkan! Silahkan login dan datanya akan tersinkronisasi.');
           window.history.replaceState({}, document.title, window.location.pathname);
         }

@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { Student } from '../types';
-import { CLASSES, STATUSES, generateId, cn, formatDate, formatAge } from '../lib/utils';
+import { CLASSES, STATUSES, generateId, cn, formatDate, formatAge, getGoogleDriveDirectImageUrl, standardizeDate } from '../lib/utils';
 import { 
   Search, Plus, Filter, Download, Upload, Edit, Trash2, Printer, X, FileDown,
-  ArrowUpDown, FileSpreadsheet, Eye, BookOpen, User, Calendar, MapPin, UserCheck, DownloadCloud, UploadCloud
+  ArrowUpDown, FileSpreadsheet, Eye, BookOpen, User, Calendar, MapPin, UserCheck, DownloadCloud, UploadCloud,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { exportToExcel, importFromExcel } from '../lib/excel';
 import { uploadFileToGAS, fetchFromGAS } from '../lib/api';
@@ -25,6 +26,15 @@ export default function StudentsList() {
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [printStudent, setPrintStudent] = useState<Student | null>(null);
   const [isPrintListMode, setIsPrintListMode] = useState(false);
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+
+  // Reset page when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterClass, sortBy]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -51,10 +61,15 @@ export default function StudentsList() {
 
   // Derived filtered & sorted data
   const filteredStudents = students.filter(s => {
+    if (!s) return false;
     const searchString = searchTerm.toLowerCase();
-    const matchesSearch = s.name.toLowerCase().includes(searchString) || 
-                          s.nis.toLowerCase().includes(searchString) ||
-                          (s.nisn && s.nisn.toLowerCase().includes(searchString));
+    const nameStr = String(s.name || '').toLowerCase();
+    const nisStr = String(s.nis || '').toLowerCase();
+    const nisnStr = String(s.nisn || '').toLowerCase();
+    
+    const matchesSearch = nameStr.includes(searchString) || 
+                          nisStr.includes(searchString) ||
+                          nisnStr.includes(searchString);
     const matchesClass = filterClass ? s.class === filterClass : true;
     return matchesSearch && matchesClass;
   });
@@ -74,6 +89,12 @@ export default function StudentsList() {
     }
     return 0; // default
   });
+
+  const totalPages = Math.ceil(sortedStudents.length / itemsPerPage);
+  const paginatedStudents = sortedStudents.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const downloadCSVTemplate = () => {
     const headers = ["NIS", "NISN", "Nama Lengkap", "Kelas", "L/P", "Tgl Lahir (YYYY-MM-DD)", "Alamat", "Nama Orang Tua", "Status (Aktif/Lulus/Pindah/Keluar)"];
@@ -167,7 +188,7 @@ export default function StudentsList() {
             name,
             class: sClass,
             gender,
-            dob,
+            dob: standardizeDate(dob),
             address,
             parentName,
             status: parsedStatus,
@@ -245,12 +266,16 @@ export default function StudentsList() {
     if (!currentStudent.name || !currentStudent.nis) return alert("Nama dan NIS Wajib diisi");
     
     const now = new Date().toISOString();
+    const sanitizedStudent = {
+      ...currentStudent,
+      dob: standardizeDate(currentStudent.dob),
+    } as Student;
     
     if (currentStudent.id) {
-      updateStudent(currentStudent.id, { ...currentStudent as Student, updatedAt: now });
+      updateStudent(currentStudent.id, { ...sanitizedStudent, updatedAt: now });
     } else {
       addStudent({
-        ...currentStudent as Student,
+        ...sanitizedStudent,
         id: generateId(),
         createdAt: now,
         updatedAt: now,
@@ -411,7 +436,7 @@ export default function StudentsList() {
                   </td>
                 </tr>
               ) : (
-                sortedStudents.map(student => (
+                paginatedStudents.map(student => (
                   <tr 
                     key={student.id} 
                     className="hover:bg-indigo-50/30 transition-colors group cursor-pointer"
@@ -490,6 +515,40 @@ export default function StudentsList() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-indigo-50/20 border-t border-indigo-50/50">
+            <p className="text-xs text-slate-500 font-medium">
+              Menampilkan <span className="font-bold text-indigo-900">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="font-bold text-indigo-900">{Math.min(currentPage * itemsPerPage, sortedStudents.length)}</span> dari <span className="font-bold text-indigo-900">{sortedStudents.length}</span> siswa
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white text-slate-600 transition"
+                title="Halaman Sebelumnya"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              
+              <div className="flex items-center gap-1 font-semibold text-xs text-slate-600">
+                <span className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold">{currentPage}</span>
+                <span className="text-slate-400 font-medium px-1">dari</span>
+                <span className="px-3 py-1.5 rounded-lg bg-white border border-slate-200">{totalPages}</span>
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white text-slate-600 transition"
+                title="Halaman Selanjutnya"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Detail Siswa Modal */}
@@ -523,7 +582,7 @@ export default function StudentsList() {
                 <div className="w-24 h-32 rounded-xl border border-slate-200 bg-white shadow-inner flex-shrink-0 flex items-center justify-center overflow-hidden relative">
                   {viewingStudent.fotoUrl ? (
                     <img 
-                      src={viewingStudent.fotoUrl.replace(/\/file\/d\/(.+?)\/view.*/, '/uc?export=view&id=$1')} 
+                      src={getGoogleDriveDirectImageUrl(viewingStudent.fotoUrl)} 
                       alt="Foto" 
                       className="w-full h-full object-cover" 
                       referrerPolicy="no-referrer"
@@ -800,7 +859,7 @@ export default function StudentsList() {
               {printStudent.fotoUrl && (
                  <div className="w-[3cm] h-[4cm] sm:w-[4cm] sm:h-[6cm] shrink-0 border-2 border-slate-800 p-1 bg-white relative flex items-center justify-center text-center overflow-hidden no-print-bg">
                     <img 
-                      src={printStudent.fotoUrl.replace(/\/file\/d\/(.+?)\/view.*/, '/uc?export=view&id=$1')} 
+                      src={getGoogleDriveDirectImageUrl(printStudent.fotoUrl)} 
                       alt="Foto Siswa" 
                       className="w-full h-full object-cover" 
                       onError={(e) => {

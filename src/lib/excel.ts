@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { Student } from '../types';
+import { standardizeDate } from './utils';
 
 export const exportToExcel = (students: Student[], filename: string = 'data-siswa.xlsx') => {
   const ws = XLSX.utils.json_to_sheet(students.map(s => ({
@@ -58,13 +59,20 @@ export const importFromExcel = (file: File): Promise<Partial<Student>[]> => {
           else if (statusRaw.toLowerCase().includes('pindah') || statusRaw.toLowerCase().includes('mutasi')) parsedStatus = 'Pindah';
           else if (statusRaw.toLowerCase().includes('keluar')) parsedStatus = 'Keluar';
 
+          // Fuzzy match for dob/tgl lahir header
+          const dobKey = Object.keys(row).find(k => {
+            const kl = k.toLowerCase();
+            return kl.includes('tgl') || kl.includes('tanggal') || kl.includes('dob') || kl.includes('lahir');
+          });
+          const dobRaw = dobKey ? row[dobKey] : (row['Tgl Lahir'] || '');
+
           return {
-            nis: String(row['NIS'] || ''),
-            nisn: String(row['NISN'] || ''),
+            nis: String(row['NIS'] || row['Nis'] || ''),
+            nisn: String(row['NISN'] || row['Nisn'] || ''),
             name: row['Nama Lengkap'] || row['Nama'] || '',
             class: row['Kelas'] || '',
-            gender: row['L/P'] === 'P' ? 'P' : 'L',
-            dob: row['Tgl Lahir'] || '',
+            gender: String(row['L/P'] || row['Gender'] || 'L').toUpperCase().startsWith('P') ? 'P' : 'L',
+            dob: standardizeDate(dobRaw),
             address: row['Alamat'] || '',
             parentName: row['Nama Orang Tua'] || '',
             status: parsedStatus,

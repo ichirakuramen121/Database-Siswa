@@ -23,7 +23,7 @@ export default function Settings() {
   const shareConfigUrl = settings.scriptUrl ? `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(btoa(JSON.stringify({ scriptUrl: settings.scriptUrl, folderId: settings.folderId, appName: settings.appName, adminUsername: settings.adminUsername, adminPassword: settings.adminPassword })))}` : '';
 
   const handleSave = () => {
-    setSettings({ 
+    const updatedSettings = { 
       ...settings, 
       scriptUrl: url, 
       appName, 
@@ -31,8 +31,26 @@ export default function Settings() {
       adminUsername: adminUser, 
       adminPassword: adminPass,
       schoolLogoUrl
+    };
+    
+    setSettings(updatedSettings);
+    
+    // Persist to server backend so any device can load it
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedSettings),
+    })
+    .then(() => {
+      setSaveMessage("Pengaturan Berhasil Disimpan & Tersinkronisasi Global!");
+    })
+    .catch((e) => {
+      console.error("Failed to save settings on server:", e);
+      setSaveMessage("Pengaturan Disimpan Lokal (Gagal sinkron server)");
     });
-    setSaveMessage("Pengaturan Berhasil Disimpan!");
+
     setTimeout(() => setSaveMessage(''), 4000);
   };
 
