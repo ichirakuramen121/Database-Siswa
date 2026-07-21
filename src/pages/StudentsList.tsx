@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { Student } from '../types';
-import { CLASSES, STATUSES, generateId, cn, formatDate, formatAge, getGoogleDriveDirectImageUrl, standardizeDate } from '../lib/utils';
+import { CLASSES, STATUSES, generateId, cn, formatDate, formatAge, getGoogleDriveDirectImageUrl, standardizeDate, matchClass } from '../lib/utils';
 import { 
   Search, Plus, Filter, Download, Upload, Edit, Trash2, Printer, X, FileDown,
   ArrowUpDown, FileSpreadsheet, Eye, BookOpen, User, Calendar, MapPin, UserCheck, DownloadCloud, UploadCloud,
@@ -70,7 +70,7 @@ export default function StudentsList() {
     const matchesSearch = nameStr.includes(searchString) || 
                           nisStr.includes(searchString) ||
                           nisnStr.includes(searchString);
-    const matchesClass = filterClass ? s.class === filterClass : true;
+    const matchesClass = filterClass ? matchClass(s.class, filterClass) : true;
     return matchesSearch && matchesClass;
   });
 
@@ -91,10 +91,11 @@ export default function StudentsList() {
     return 0; // default
   });
 
-  const totalPages = Math.ceil(sortedStudents.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedStudents.length / itemsPerPage) || 1;
+  const safePage = Math.min(currentPage, totalPages);
   const paginatedStudents = sortedStudents.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    (safePage - 1) * itemsPerPage,
+    safePage * itemsPerPage
   );
 
   const downloadCSVTemplate = () => {
@@ -521,12 +522,12 @@ export default function StudentsList() {
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-indigo-50/20 border-t border-indigo-50/50">
             <p className="text-xs text-slate-500 font-medium">
-              Menampilkan <span className="font-bold text-indigo-900">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="font-bold text-indigo-900">{Math.min(currentPage * itemsPerPage, sortedStudents.length)}</span> dari <span className="font-bold text-indigo-900">{sortedStudents.length}</span> siswa
+              Menampilkan <span className="font-bold text-indigo-900">{(safePage - 1) * itemsPerPage + 1}</span> - <span className="font-bold text-indigo-900">{Math.min(safePage * itemsPerPage, sortedStudents.length)}</span> dari <span className="font-bold text-indigo-900">{sortedStudents.length}</span> siswa
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
+                disabled={safePage === 1}
                 className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white text-slate-600 transition"
                 title="Halaman Sebelumnya"
               >
@@ -534,14 +535,14 @@ export default function StudentsList() {
               </button>
               
               <div className="flex items-center gap-1 font-semibold text-xs text-slate-600">
-                <span className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold">{currentPage}</span>
+                <span className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold">{safePage}</span>
                 <span className="text-slate-400 font-medium px-1">dari</span>
                 <span className="px-3 py-1.5 rounded-lg bg-white border border-slate-200">{totalPages}</span>
               </div>
 
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                disabled={safePage === totalPages}
                 className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white text-slate-600 transition"
                 title="Halaman Selanjutnya"
               >

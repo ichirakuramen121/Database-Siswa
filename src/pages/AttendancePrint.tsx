@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
-import { CLASSES } from '../lib/utils';
+import { CLASSES, matchClass, matchStatusActive } from '../lib/utils';
 import { Printer, Filter, Calendar as CalendarIcon, FileSpreadsheet } from 'lucide-react';
 
 export default function AttendancePrint() {
@@ -18,9 +18,13 @@ export default function AttendancePrint() {
 
   // Active students for selected class
   const classStudents = useMemo(() => {
+    if (!students) return [];
     return students
-      .filter(s => s.status === 'Aktif' && s.class === selectedClass)
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .filter(s => {
+        if (!s) return false;
+        return matchStatusActive(s.status) && matchClass(s.class, selectedClass);
+      })
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'id'));
   }, [students, selectedClass]);
 
   // Calculate days in selected month (excluding Sundays optionally, but let's just create generic columns for all days for simplicity, or 31 fixed cols)

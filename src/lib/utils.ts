@@ -152,3 +152,25 @@ export function getGoogleDriveDirectImageUrl(url: string | null | undefined): st
   return cleanUrl;
 }
 
+export function matchClass(studentClass: string | null | undefined, targetClass: string | null | undefined): boolean {
+  if (!studentClass || !targetClass) return false;
+  
+  // Clean target: e.g. "1A" -> "1A"
+  const cleanTarget = String(targetClass).replace(/\s+/g, '').toUpperCase();
+  
+  // Clean student class: e.g. "Kelas 1A" -> "1A", "Kelas 1-A" -> "1A", "1-A" -> "1A"
+  const cleanStudent = String(studentClass)
+    .toUpperCase()
+    .replace(/KELAS/g, '')
+    .replace(/[-_]/g, '')
+    .replace(/\s+/g, '');
+    
+  return cleanStudent === cleanTarget;
+}
+
+export function matchStatusActive(status: string | null | undefined): boolean {
+  if (!status) return false;
+  const cleanStatus = String(status).trim().toLowerCase();
+  return cleanStatus === 'aktif';
+}
+

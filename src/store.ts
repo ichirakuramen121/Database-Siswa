@@ -52,11 +52,6 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'sis-storage',
-      partialize: (state) => {
-        // Exclude isAuthenticated from persistence so they must log in on reload/session start
-        const { isAuthenticated, ...rest } = state;
-        return rest;
-      },
     }
   )
 );

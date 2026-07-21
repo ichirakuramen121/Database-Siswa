@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
-import { CLASSES, cn } from '../lib/utils';
+import { CLASSES, cn, matchClass, matchStatusActive } from '../lib/utils';
 import { Student } from '../types';
 import { Users, ArrowUpCircle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { fetchFromGAS } from '../lib/api';
@@ -18,10 +18,7 @@ export default function KenaikanKelas() {
     return students
       .filter(s => {
         if (!s) return false;
-        const statusClean = String(s.status || '').trim().toLowerCase();
-        const classClean = String(s.class || '').trim().toUpperCase();
-        const targetClass = String(selectedClass || '').trim().toUpperCase();
-        return statusClean === 'aktif' && classClean === targetClass;
+        return matchStatusActive(s.status) && matchClass(s.class, selectedClass);
       })
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'id'));
   }, [students, selectedClass]);
