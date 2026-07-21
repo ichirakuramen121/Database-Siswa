@@ -14,9 +14,16 @@ export default function KenaikanKelas() {
   
   // Only active students in the selected class
   const classStudents = useMemo(() => {
+    if (!students) return [];
     return students
-      .filter(s => s.status === 'Aktif' && s.class === selectedClass)
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .filter(s => {
+        if (!s) return false;
+        const statusClean = String(s.status || '').trim().toLowerCase();
+        const classClean = String(s.class || '').trim().toUpperCase();
+        const targetClass = String(selectedClass || '').trim().toUpperCase();
+        return statusClean === 'aktif' && classClean === targetClass;
+      })
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'id'));
   }, [students, selectedClass]);
 
   // Calculate next class dynamically based on Grade + letter

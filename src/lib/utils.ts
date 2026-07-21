@@ -133,13 +133,14 @@ export function formatAge(dobString: string | null | undefined): string {
 
 export function getGoogleDriveDirectImageUrl(url: string | null | undefined): string {
   if (!url) return '';
+  const cleanUrl = String(url).trim().replace(/['"]/g, '');
   // Convert Google Drive sharing link to a direct image endpoint that bypasses restrictions
   let id = '';
-  const fileDMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  const fileDMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (fileDMatch && fileDMatch[1]) {
     id = fileDMatch[1];
   } else {
-    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const idMatch = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
     if (idMatch && idMatch[1]) {
       id = idMatch[1];
     }
@@ -148,6 +149,6 @@ export function getGoogleDriveDirectImageUrl(url: string | null | undefined): st
   if (id) {
     return `https://lh3.googleusercontent.com/d/${id}`;
   }
-  return url;
+  return cleanUrl;
 }
 

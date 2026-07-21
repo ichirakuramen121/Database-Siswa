@@ -75,17 +75,18 @@ export default function StudentsList() {
   });
 
   const sortedStudents = [...filteredStudents].sort((a, b) => {
+    if (!a || !b) return 0;
     if (sortBy === 'name-asc') {
-      return a.name.localeCompare(b.name, 'id');
+      return String(a.name || '').localeCompare(String(b.name || ''), 'id');
     }
     if (sortBy === 'name-desc') {
-      return b.name.localeCompare(a.name, 'id');
+      return String(b.name || '').localeCompare(String(a.name || ''), 'id');
     }
     if (sortBy === 'class-asc') {
-      return a.class.localeCompare(b.class);
+      return String(a.class || '').localeCompare(String(b.class || ''));
     }
     if (sortBy === 'class-desc') {
-      return b.class.localeCompare(a.class);
+      return String(b.class || '').localeCompare(String(a.class || ''));
     }
     return 0; // default
   });
@@ -579,16 +580,29 @@ export default function StudentsList() {
               {/* Profile card / top summary */}
               <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100/30">
                 {/* Photo / Avatar */}
-                <div className="w-24 h-32 rounded-xl border border-slate-200 bg-white shadow-inner flex-shrink-0 flex items-center justify-center overflow-hidden relative">
-                  {viewingStudent.fotoUrl ? (
-                    <img 
-                      src={getGoogleDriveDirectImageUrl(viewingStudent.fotoUrl)} 
-                      alt="Foto" 
-                      className="w-full h-full object-cover" 
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <span className="text-3xl font-black text-indigo-300">{viewingStudent.name ? viewingStudent.name[0] : 'S'}</span>
+                <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                  <div className="w-24 h-32 rounded-xl border border-slate-200 bg-white shadow-inner flex items-center justify-center overflow-hidden relative">
+                    {viewingStudent.fotoUrl ? (
+                      <img 
+                        src={getGoogleDriveDirectImageUrl(viewingStudent.fotoUrl)} 
+                        alt="Foto" 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="text-3xl font-black text-indigo-300">{viewingStudent.name ? viewingStudent.name[0] : 'S'}</span>
+                    )}
+                  </div>
+                  {viewingStudent.fotoUrl && (
+                    <a 
+                      href={viewingStudent.fotoUrl.trim().replace(/['"]/g, '')} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="text-[10px] text-indigo-600 font-black hover:underline flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100/70 px-2 py-0.5 rounded transition"
+                      title="Jika foto tidak muncul, klik untuk membuka file asli di Google Drive"
+                    >
+                      Buka di Drive ↗
+                    </a>
                   )}
                 </div>
                 <div className="flex-1 text-center sm:text-left space-y-2">
