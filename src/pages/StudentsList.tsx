@@ -5,7 +5,7 @@ import { CLASSES, STATUSES, generateId, cn, formatDate, formatAge, getGoogleDriv
 import { 
   Search, Plus, Filter, Download, Upload, Edit, Trash2, Printer, X, FileDown,
   ArrowUpDown, FileSpreadsheet, Eye, BookOpen, User, Calendar, MapPin, UserCheck, DownloadCloud, UploadCloud,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, RefreshCw, PlusCircle
 } from 'lucide-react';
 import { exportToExcel, importFromExcel, parseCSVToStudents } from '../lib/excel';
 import { uploadFileToGAS, fetchFromGAS } from '../lib/api';
@@ -26,6 +26,15 @@ export default function StudentsList() {
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [printStudent, setPrintStudent] = useState<Student | null>(null);
   const [isPrintListMode, setIsPrintListMode] = useState(false);
+  // Import Preview Modal State
+  interface ImportPreviewState {
+    fileName: string;
+    fileType: 'CSV' | 'Excel';
+    parsedData: Partial<Student>[];
+  }
+  const [importPreview, setImportPreview] = useState<ImportPreviewState | null>(null);
+  const [importMode, setImportMode] = useState<'UPDATE' | 'SKIP_EXISTING' | 'ADD_ALL'>('UPDATE');
+  const [isProcessingImport, setIsProcessingImport] = useState(false);
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -119,7 +128,7 @@ export default function StudentsList() {
     document.body.removeChild(link);
   };
 
-  const processStudentImport = async (parsed: Partial<Student>[]) => {
+  const processStudentImport = async (parsed: Partial<Student>[], mode: 'UPDATE' | 'SKIP_EXISTING' | 'ADD_ALL') => {
     if (parsed.length === 0) {
       alert("Tidak ada data valid yang diimport.");
       return;
@@ -128,6 +137,7 @@ export default function StudentsList() {
     const now = new Date().toISOString();
     let addedCount = 0;
     let updatedCount = 0;
+    let skippedCount = 0;
 
     const currentStudents = [...useStore.getState().students];
 
@@ -137,6 +147,28 @@ export default function StudentsList() {
       const impName = imp.name ? String(imp.name).trim().toLowerCase() : '';
 
       if (!impName && !impNis && !impNisn) continue;
+
+      if (mode === 'ADD_ALL') {
+        const newStudent: Student = {
+          id: generateId(),
+          nis: impNis,
+          nisn: impNisn,
+          name: imp.name?.trim() || 'Siswa',
+          class: imp.class || '1A',
+          gender: imp.gender || 'L',
+          dob: imp.dob || '',
+          address: imp.address || '',
+          parentName: imp.parentName || '',
+          status: imp.status || 'Aktif',
+          ijazahNo: imp.ijazahNo || '',
+          createdAt: now,
+          updatedAt: now,
+        };
+        currentStudents.push(newStudent);
+        useStore.getState().addStudent(newStudent);
+        addedCount++;
+        continue;
+      }
 
       const existingIdx = currentStudents.findIndex(e => {
         const eNis = e.nis ? String(e.nis).trim() : '';
@@ -150,24 +182,29 @@ export default function StudentsList() {
       });
 
       if (existingIdx >= 0) {
-        const existing = currentStudents[existingIdx];
-        const updated: Student = {
-          ...existing,
-          nis: impNis || existing.nis,
-          nisn: impNisn || existing.nisn,
-          name: imp.name?.trim() || existing.name,
-          class: imp.class || existing.class,
-          gender: imp.gender || existing.gender,
-          dob: imp.dob || existing.dob,
-          address: imp.address || existing.address,
-          parentName: imp.parentName || existing.parentName,
-          status: imp.status || existing.status,
-          ijazahNo: imp.ijazahNo || existing.ijazahNo,
-          updatedAt: now,
-        };
-        currentStudents[existingIdx] = updated;
-        useStore.getState().updateStudent(existing.id, updated);
-        updatedCount++;
+        if (mode === 'SKIP_EXISTING') {
+          skippedCount++;
+        } else {
+          // UPDATE mode
+          const existing = currentStudents[existingIdx];
+          const updated: Student = {
+            ...existing,
+            nis: impNis || existing.nis,
+            nisn: impNisn || existing.nisn,
+            name: imp.name?.trim() || existing.name,
+            class: imp.class || existing.class,
+            gender: imp.gender || existing.gender,
+            dob: imp.dob || existing.dob,
+            address: imp.address || existing.address,
+            parentName: imp.parentName || existing.parentName,
+            status: imp.status || existing.status,
+            ijazahNo: imp.ijazahNo || existing.ijazahNo,
+            updatedAt: now,
+          };
+          currentStudents[existingIdx] = updated;
+          useStore.getState().updateStudent(existing.id, updated);
+          updatedCount++;
+        }
       } else {
         const newStudent: Student = {
           id: generateId(),
@@ -193,7 +230,27 @@ export default function StudentsList() {
     const finalStudents = useStore.getState().students;
     await triggerSync(finalStudents);
 
-    alert(`Proses Import Selesai!\n• ${addedCount} data baru ditambahkan\n• ${updatedCount} data lama diperbarui/ditimpa`);
+    let summary = `Proses Import Selesai!\n• ${addedCount} data baru ditambahkan`;
+    if (mode === 'UPDATE') {
+      summary += `\n• ${updatedCount} data lama diperbarui/ditimpa`;
+    } else if (mode === 'SKIP_EXISTING') {
+      summary += `\n• ${skippedCount} data lama dilewati (tidak ditimpa)`;
+    }
+    alert(summary);
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPreview) return;
+    setIsProcessingImport(true);
+    try {
+      await processStudentImport(importPreview.parsedData, importMode);
+      setImportPreview(null);
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan saat mengimpor data.");
+    } finally {
+      setIsProcessingImport(false);
+    }
   };
 
   const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,7 +262,16 @@ export default function StudentsList() {
       try {
         const text = event.target?.result as string;
         const parsed = parseCSVToStudents(text);
-        await processStudentImport(parsed);
+        if (parsed.length === 0) {
+          alert("File CSV kosong atau tidak ada data valid.");
+          return;
+        }
+        setImportPreview({
+          fileName: file.name,
+          fileType: 'CSV',
+          parsedData: parsed
+        });
+        setImportMode('UPDATE');
       } catch (err) {
         console.error(err);
         alert("Gagal mengimpor file CSV.");
@@ -311,10 +377,19 @@ export default function StudentsList() {
     if (!file) return;
     try {
       const parsed = await importFromExcel(file);
-      await processStudentImport(parsed);
+      if (parsed.length === 0) {
+        alert("File Excel kosong atau tidak ada data valid.");
+        return;
+      }
+      setImportPreview({
+        fileName: file.name,
+        fileType: 'Excel',
+        parsedData: parsed
+      });
+      setImportMode('UPDATE');
     } catch (err) {
       console.error(err);
-      alert("Gagal import file Excel");
+      alert("Gagal membaca file Excel");
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -935,6 +1010,190 @@ export default function StudentsList() {
                 <p className="font-semibold text-right">( Administrasi Sekolah )</p>
              </div>
            </div>
+        </div>
+      )}
+
+      {/* Modal Selection Import CSV / Excel */}
+      {importPreview && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="p-5 bg-gradient-to-r from-indigo-900 to-indigo-800 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-white/10 rounded-xl">
+                  <UploadCloud className="text-amber-300" size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Menu Import {importPreview.fileType}</h3>
+                  <p className="text-xs text-indigo-200 flex items-center gap-1.5 mt-0.5">
+                    <span>📄 {importPreview.fileName}</span>
+                    <span>•</span>
+                    <span className="font-semibold text-amber-300">{importPreview.parsedData.length} data terdeteksi</span>
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setImportPreview(null)}
+                className="p-1.5 text-indigo-200 hover:text-white hover:bg-white/10 rounded-lg transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+              {/* Preview Table */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 block">
+                  Pratinjau Data File (3 Baris Pertama)
+                </label>
+                <div className="border border-gray-200 rounded-xl overflow-hidden text-xs bg-gray-50">
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-100 text-gray-700 font-semibold border-b border-gray-200">
+                      <tr>
+                        <th className="p-2">NIS</th>
+                        <th className="p-2">Nama</th>
+                        <th className="p-2">Kelas</th>
+                        <th className="p-2">L/P</th>
+                        <th className="p-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {importPreview.parsedData.slice(0, 3).map((s, idx) => (
+                        <tr key={idx} className="bg-white">
+                          <td className="p-2 font-mono text-gray-600">{s.nis || '-'}</td>
+                          <td className="p-2 font-medium text-gray-800">{s.name || '-'}</td>
+                          <td className="p-2 text-gray-600">{s.class || '1A'}</td>
+                          <td className="p-2 text-gray-600">{s.gender || 'L'}</td>
+                          <td className="p-2 text-gray-600">{s.status || 'Aktif'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Mode Selection */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2.5 block">
+                  Pilih Cara Pengolahan Data
+                </label>
+                <div className="space-y-3">
+                  {/* Option 1: Update Existing & Add New */}
+                  <label 
+                    className={cn(
+                      "flex items-start gap-3.5 p-3.5 rounded-xl border-2 transition cursor-pointer",
+                      importMode === 'UPDATE' 
+                        ? "border-indigo-600 bg-indigo-50/50 shadow-sm" 
+                        : "border-gray-200 hover:border-gray-300 bg-white"
+                    )}
+                  >
+                    <input 
+                      type="radio" 
+                      name="importMode" 
+                      value="UPDATE" 
+                      checked={importMode === 'UPDATE'}
+                      onChange={() => setImportMode('UPDATE')}
+                      className="mt-1 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw size={16} className="text-indigo-600" />
+                        <span className="font-semibold text-sm text-gray-900">Perbarui Data Lama & Tambah Data Baru</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">Rekomendasi</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Jika siswa sudah ada (cocok NIS / NISN / Nama), data lama akan diperbarui/ditimpa. Siswa yang belum ada akan ditambahkan.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Option 2: Skip Existing (Only Add New) */}
+                  <label 
+                    className={cn(
+                      "flex items-start gap-3.5 p-3.5 rounded-xl border-2 transition cursor-pointer",
+                      importMode === 'SKIP_EXISTING' 
+                        ? "border-amber-600 bg-amber-50/50 shadow-sm" 
+                        : "border-gray-200 hover:border-gray-300 bg-white"
+                    )}
+                  >
+                    <input 
+                      type="radio" 
+                      name="importMode" 
+                      value="SKIP_EXISTING" 
+                      checked={importMode === 'SKIP_EXISTING'}
+                      onChange={() => setImportMode('SKIP_EXISTING')}
+                      className="mt-1 text-amber-600 focus:ring-amber-500"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <UserCheck size={16} className="text-amber-600" />
+                        <span className="font-semibold text-sm text-gray-900">Hanya Tambah Data Baru (Abaikan jika Sudah Ada)</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Jika siswa sudah ada di sistem, datanya tidak disentuh/tidak ditimpa. Hanya siswa baru yang dimasukkan.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Option 3: Add All */}
+                  <label 
+                    className={cn(
+                      "flex items-start gap-3.5 p-3.5 rounded-xl border-2 transition cursor-pointer",
+                      importMode === 'ADD_ALL' 
+                        ? "border-emerald-600 bg-emerald-50/50 shadow-sm" 
+                        : "border-gray-200 hover:border-gray-300 bg-white"
+                    )}
+                  >
+                    <input 
+                      type="radio" 
+                      name="importMode" 
+                      value="ADD_ALL" 
+                      checked={importMode === 'ADD_ALL'}
+                      onChange={() => setImportMode('ADD_ALL')}
+                      className="mt-1 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <PlusCircle size={16} className="text-emerald-600" />
+                        <span className="font-semibold text-sm text-gray-900">Tambah Semua Sebagai Data Baru</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Abaikan pengecekan duplikasi. Seluruh {importPreview.parsedData.length} baris di file akan dibuat sebagai entri baru.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setImportPreview(null)}
+                disabled={isProcessingImport}
+                className="px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-200/60 rounded-xl transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleConfirmImport}
+                disabled={isProcessingImport}
+                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow-lg shadow-indigo-200 transition disabled:opacity-50"
+              >
+                {isProcessingImport ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud size={16} />
+                    Proses Import ({importPreview.parsedData.length} Data)
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
