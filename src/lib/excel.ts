@@ -401,8 +401,8 @@ export const importTeachersFromExcel = (file: File): Promise<Partial<Teacher>[]>
 
     reader.onload = (e) => {
       try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         const json = XLSX.utils.sheet_to_json<any>(worksheet);
@@ -439,7 +439,7 @@ export const importTeachersFromExcel = (file: File): Promise<Partial<Teacher>[]>
       }
     };
     reader.onerror = (err) => reject(err);
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   });
 };
 
@@ -464,8 +464,8 @@ export const importFromExcel = (file: File): Promise<Partial<Student>[]> => {
 
     reader.onload = (e) => {
       try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         const json = XLSX.utils.sheet_to_json<any>(worksheet);
@@ -514,6 +514,6 @@ export const importFromExcel = (file: File): Promise<Partial<Student>[]> => {
       }
     };
     reader.onerror = (err) => reject(err);
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   });
 };

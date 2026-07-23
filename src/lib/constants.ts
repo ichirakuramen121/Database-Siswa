@@ -151,7 +151,7 @@ function doPost(e) {
 
     if (payload.action === "pull") {
       ensureHeaders(sheetSiswa, STANDARD_SISWA_HEADERS);
-      const siswaData = sheetSiswa.getDataRange().getValues();
+      const siswaData = sheetSiswa.getDataRange().getDisplayValues();
       const students = [];
       if (siswaData.length > 1) {
         const headers = siswaData[0];
@@ -166,7 +166,7 @@ function doPost(e) {
       }
 
       ensureHeaders(sheetGuru, STANDARD_GURU_HEADERS);
-      const guruData = sheetGuru.getDataRange().getValues();
+      const guruData = sheetGuru.getDataRange().getDisplayValues();
       const teachers = [];
       if (guruData.length > 1) {
         const headers = guruData[0];
@@ -204,7 +204,7 @@ function doGet(e) {
     }
     
     ensureHeaders(sheetSiswa, STANDARD_SISWA_HEADERS);
-    const siswaData = sheetSiswa.getDataRange().getValues();
+    const siswaData = sheetSiswa.getDataRange().getDisplayValues();
     const students = [];
     if (siswaData.length > 1) {
       const headers = siswaData[0];
@@ -219,7 +219,7 @@ function doGet(e) {
     }
 
     ensureHeaders(sheetGuru, STANDARD_GURU_HEADERS);
-    const guruData = sheetGuru.getDataRange().getValues();
+    const guruData = sheetGuru.getDataRange().getDisplayValues();
     const teachers = [];
     if (guruData.length > 1) {
       const headers = guruData[0];

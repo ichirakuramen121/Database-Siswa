@@ -18,26 +18,25 @@ export const STATUSES = ["Aktif", "Lulus", "Pindah", "Keluar"]; // Pindah repres
 
 export function standardizeDate(value: any): string {
   if (value === null || value === undefined) return '';
-  
-  // If it's a JavaScript Date object
+
+  // 1. If value is a JavaScript Date object
   if (value instanceof Date) {
     if (isNaN(value.getTime())) return '';
-    // If the date object represents local midnight (e.g. new Date(2019, 5, 4))
-    // use local date getters to prevent timezone shifts.
-    let y: number, m: number, d: number;
-    if (value.getHours() === 0 && value.getMinutes() === 0 && value.getSeconds() === 0) {
-      y = value.getFullYear();
-      m = value.getMonth() + 1;
-      d = value.getDate();
-    } else {
-      y = value.getUTCFullYear();
-      m = value.getUTCMonth() + 1;
-      d = value.getUTCDate();
+    // If created as UTC midnight or near UTC midnight
+    if (value.getUTCHours() === 0 && value.getUTCMinutes() === 0) {
+      const y = value.getUTCFullYear();
+      const m = String(value.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(value.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     }
-    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    // Otherwise use local date getters
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
-  // If it's a number or numeric string (likely Excel serial number e.g. 43620)
+  // 2. If it's a number or numeric string (Excel serial number e.g. 43620)
   if (
     typeof value === 'number' ||
     (typeof value === 'string' && /^\d+(\.\d+)?$/.test(value.trim()) && Number(value) > 1000 && Number(value) < 100000)
@@ -57,16 +56,8 @@ export function standardizeDate(value: any): string {
   let str = String(value).trim();
   if (!str || str === '-') return '';
 
-  // Handle ISO / timestamp strings with time e.g. "2019-06-04T00:00:00.000Z" or "2019-06-04 00:00:00"
-  if (str.includes('T') || str.includes(' ')) {
-    const datePart = str.split(/[T ]/)[0];
-    if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(datePart) || /^\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}$/.test(datePart)) {
-      str = datePart;
-    }
-  }
-
-  // 1. YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
-  const ymdMatch = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  // 3. String matches YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD (e.g. 2019-06-04)
+  const ymdMatch = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
   if (ymdMatch) {
     const year = ymdMatch[1];
     const month = ymdMatch[2].padStart(2, '0');
@@ -74,8 +65,8 @@ export function standardizeDate(value: any): string {
     return `${year}-${month}-${day}`;
   }
 
-  // 2. DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY (Indonesian format)
-  const dmYMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+  // 4. String matches DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY (Indonesian format e.g. 04/06/2019)
+  const dmYMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/);
   if (dmYMatch) {
     const day = dmYMatch[1].padStart(2, '0');
     const month = dmYMatch[2].padStart(2, '0');
@@ -87,7 +78,16 @@ export function standardizeDate(value: any): string {
     return `${year}-${month}-${day}`;
   }
 
-  // Fallback native date parsing
+  // 5. Handle ISO timestamp string with T e.g. "2019-06-04T00:00:00.000Z"
+  if (str.includes('T')) {
+    const datePart = str.split('T')[0];
+    const ymd = datePart.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+    if (ymd) {
+      return `${ymd[1]}-${ymd[2].padStart(2, '0')}-${ymd[3].padStart(2, '0')}`;
+    }
+  }
+
+  // 6. Fallback native date parsing
   try {
     const parsed = new Date(str);
     if (!isNaN(parsed.getTime())) {
