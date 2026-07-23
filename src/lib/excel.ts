@@ -289,6 +289,69 @@ export const exportTeachersToExcel = (teachers: any[], filename: string = 'data-
   XLSX.writeFile(wb, filename);
 };
 
+export const importTeachersFromExcel = (file: File): Promise<Partial<Teacher>[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string;
+          const teachers = parseCSVToTeachers(text);
+          resolve(teachers);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsText(file);
+      return;
+    }
+
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const json = XLSX.utils.sheet_to_json<any>(worksheet);
+
+        const mapped = json.map(row => {
+          const nipKey = Object.keys(row).find(k => k.toLowerCase().includes('nip'));
+          const nameKey = Object.keys(row).find(k => k.toLowerCase().includes('nama') || k.toLowerCase().includes('name'));
+          const genderKey = Object.keys(row).find(k => k.toLowerCase().includes('l/p') || k.toLowerCase().includes('jk') || k.toLowerCase().includes('gender'));
+          const classKey = Object.keys(row).find(k => k.toLowerCase().includes('kelas') || k.toLowerCase().includes('wali') || k.toLowerCase().includes('class'));
+          const phoneKey = Object.keys(row).find(k => k.toLowerCase().includes('telp') || k.toLowerCase().includes('phone') || k.toLowerCase().includes('hp') || k.toLowerCase().includes('wa') || k.toLowerCase().includes('telepon'));
+          const emailKey = Object.keys(row).find(k => k.toLowerCase().includes('email'));
+          const statusKey = Object.keys(row).find(k => k.toLowerCase().includes('status'));
+
+          let assignedClass = String((classKey ? row[classKey] : row['Wali Kelas'] || row['Kelas']) || 'None');
+          assignedClass = assignedClass.toUpperCase().replace(/KELAS/g, '').replace(/[-_]/g, '').trim() || 'None';
+
+          let statusRaw = String((statusKey ? row[statusKey] : row['Status']) || 'Aktif');
+          const status: 'Aktif' | 'Nonaktif' = statusRaw.toLowerCase().includes('non') ? 'Nonaktif' : 'Aktif';
+
+          return {
+            nip: String((nipKey ? row[nipKey] : row['NIP']) || row['Nip'] || ''),
+            name: String((nameKey ? row[nameKey] : row['Nama Lengkap']) || row['Nama'] || ''),
+            gender: String((genderKey ? row[genderKey] : row['L/P']) || row['Gender'] || 'L').toUpperCase().startsWith('P') ? 'P' : 'L',
+            class: assignedClass,
+            phone: String((phoneKey ? row[phoneKey] : row['No Telepon']) || row['Phone'] || ''),
+            email: String((emailKey ? row[emailKey] : row['Email']) || ''),
+            status,
+          } as Partial<Teacher>;
+        }).filter(t => t.name || t.nip);
+
+        resolve(mapped);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsBinaryString(file);
+  });
+};
+
 export const importFromExcel = (file: File): Promise<Partial<Student>[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

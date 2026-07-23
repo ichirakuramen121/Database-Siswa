@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { generateId, cn } from '../lib/utils';
 import { fetchFromGAS } from '../lib/api';
-import { exportTeachersToExcel, parseCSVToTeachers } from '../lib/excel';
+import { exportTeachersToExcel, parseCSVToTeachers, importTeachersFromExcel } from '../lib/excel';
 
 export default function TeachersList() {
   const { teachers, settings, addTeacher, updateTeacher, deleteTeacher, setLoading, setIsSyncingGlobal } = useStore();
@@ -157,31 +157,26 @@ export default function TeachersList() {
     }
   };
 
-  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        const parsed = parseCSVToTeachers(text);
-        if (parsed.length === 0) {
-          alert("Tidak ada data valid yang diimport.");
-          return;
-        }
-
-        setImportPreview({
-          fileName: file.name,
-          parsedData: parsed
-        });
-        setImportMode('UPDATE');
-      } catch (err: any) {
-        console.error(err);
-        alert("Gagal mengimpor file CSV: " + (err?.message || err));
+    try {
+      const parsed = await importTeachersFromExcel(file);
+      if (parsed.length === 0) {
+        alert("File kosong atau tidak ada data guru yang valid.");
+        return;
       }
-    };
-    reader.readAsText(file);
+
+      setImportPreview({
+        fileName: file.name,
+        parsedData: parsed
+      });
+      setImportMode('UPDATE');
+    } catch (err: any) {
+      console.error(err);
+      alert("Gagal mengimpor file Excel/CSV: " + (err?.message || err));
+    }
     if (csvInputRef.current) csvInputRef.current.value = '';
   };
 
@@ -342,7 +337,7 @@ export default function TeachersList() {
         <div className="flex items-center gap-3 flex-wrap">
           <input 
             type="file" 
-            accept=".csv"
+            accept=".csv, .xlsx, .xls, .txt"
             className="hidden" 
             ref={csvInputRef}
             onChange={handleCSVImport}
@@ -357,7 +352,7 @@ export default function TeachersList() {
             onClick={() => csvInputRef.current?.click()} 
             className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-sm transition active:scale-95 duration-150"
           >
-            <UploadCloud size={16} /> Import CSV
+            <UploadCloud size={16} /> Import Excel / CSV
           </button>
           <button 
             onClick={() => exportTeachersToExcel(filteredTeachers, `Daftar_Guru_${new Date().toISOString().slice(0, 10)}.xlsx`)} 
