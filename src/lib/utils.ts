@@ -22,11 +22,19 @@ export function standardizeDate(value: any): string {
   // If it's a JavaScript Date object
   if (value instanceof Date) {
     if (isNaN(value.getTime())) return '';
-    // Excel dates parsed by SheetJS use UTC midnight
-    const y = value.getUTCFullYear();
-    const m = String(value.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(value.getUTCDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+    // If the date object represents local midnight (e.g. new Date(2019, 5, 4))
+    // use local date getters to prevent timezone shifts.
+    let y: number, m: number, d: number;
+    if (value.getHours() === 0 && value.getMinutes() === 0 && value.getSeconds() === 0) {
+      y = value.getFullYear();
+      m = value.getMonth() + 1;
+      d = value.getDate();
+    } else {
+      y = value.getUTCFullYear();
+      m = value.getUTCMonth() + 1;
+      d = value.getUTCDate();
+    }
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   }
 
   // If it's a number or numeric string (likely Excel serial number e.g. 43620)
@@ -52,12 +60,12 @@ export function standardizeDate(value: any): string {
   // Handle ISO / timestamp strings with time e.g. "2019-06-04T00:00:00.000Z" or "2019-06-04 00:00:00"
   if (str.includes('T') || str.includes(' ')) {
     const datePart = str.split(/[T ]/)[0];
-    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-      return datePart;
+    if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(datePart) || /^\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}$/.test(datePart)) {
+      str = datePart;
     }
   }
 
-  // YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
+  // 1. YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
   const ymdMatch = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
   if (ymdMatch) {
     const year = ymdMatch[1];
@@ -66,12 +74,16 @@ export function standardizeDate(value: any): string {
     return `${year}-${month}-${day}`;
   }
 
-  // DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY
-  const dmYMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  // 2. DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY (Indonesian format)
+  const dmYMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
   if (dmYMatch) {
     const day = dmYMatch[1].padStart(2, '0');
     const month = dmYMatch[2].padStart(2, '0');
-    const year = dmYMatch[3];
+    let year = dmYMatch[3];
+    if (year.length === 2) {
+      const yNum = parseInt(year, 10);
+      year = yNum > 30 ? `19${year}` : `20${year}`;
+    }
     return `${year}-${month}-${day}`;
   }
 
