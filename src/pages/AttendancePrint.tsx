@@ -55,11 +55,11 @@ export default function AttendancePrint() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 bg-white/40 p-4 rounded-3xl border border-white/60 shadow-sm backdrop-blur-md no-print">
-        <div className="flex gap-2 w-full flex-wrap">
-          <div className="relative shrink-0 flex-1 min-w-[150px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full">
+          <div className="relative">
             <Filter className="absolute left-4 top-3.5 text-gray-400" size={18} />
             <select 
-              className="w-full bg-white/60 backdrop-blur-lg border border-white/80 px-5 py-3 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 pl-11 appearance-none font-medium text-gray-700"
+              className="w-full bg-white/60 backdrop-blur-lg border border-white/80 px-5 py-3 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 pl-11 appearance-none font-medium text-gray-700 text-sm"
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
             >
@@ -67,10 +67,10 @@ export default function AttendancePrint() {
             </select>
           </div>
           
-          <div className="relative shrink-0 flex-1 min-w-[150px]">
+          <div className="relative">
             <CalendarIcon className="absolute left-4 top-3.5 text-gray-400" size={18} />
             <select 
-              className="w-full bg-white/60 backdrop-blur-lg border border-white/80 px-5 py-3 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 pl-11 appearance-none font-medium text-gray-700"
+              className="w-full bg-white/60 backdrop-blur-lg border border-white/80 px-5 py-3 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 pl-11 appearance-none font-medium text-gray-700 text-sm"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
             >
@@ -78,9 +78,9 @@ export default function AttendancePrint() {
             </select>
           </div>
 
-          <div className="relative shrink-0 flex-1 min-w-[120px]">
+          <div className="relative">
              <select 
-              className="w-full bg-white/60 backdrop-blur-lg border border-white/80 px-5 py-3 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 appearance-none font-medium text-gray-700"
+              className="w-full bg-white/60 backdrop-blur-lg border border-white/80 px-5 py-3 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 appearance-none font-medium text-gray-700 text-sm"
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
             >
@@ -88,7 +88,7 @@ export default function AttendancePrint() {
             </select>
           </div>
 
-          <button onClick={handlePrint} className="btn justify-center w-full md:w-auto shrink-0 flex-1 min-w-[150px]">
+          <button onClick={handlePrint} className="btn justify-center w-full">
             <Printer className="mr-2" size={18} /> Cetak Daftar Hadir
           </button>
         </div>
@@ -101,59 +101,86 @@ export default function AttendancePrint() {
            <p className="text-gray-500 mt-2">Silakan tambahkan siswa terlebih dahulu.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto p-4 md:p-8 print:shadow-none print:border-none print:p-0 print:overflow-visible">
-          <div className="printable-container min-w-[900px] print:min-w-0">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-x-auto p-3 sm:p-6 print:shadow-none print:border-none print:p-0 print:overflow-visible">
+          <div className="printable-container print-single-page min-w-[900px] print:min-w-0">
             
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold uppercase mb-1">Daftar Hadir Siswa</h1>
-              <h2 className="text-lg font-bold">Bulan: {months[selectedMonth]} {selectedYear} &nbsp;&nbsp;&nbsp;&nbsp; Kelas: {selectedClass}</h2>
+            <div className="text-center mb-4 print:mb-2">
+              <h1 className="text-xl print:text-base font-bold uppercase mb-0.5 tracking-tight">Daftar Hadir Siswa</h1>
+              <h2 className="text-sm print:text-xs font-semibold text-gray-800">Bulan: {months[selectedMonth]} {selectedYear} &nbsp;&nbsp;&nbsp;&nbsp; Kelas: {selectedClass}</h2>
             </div>
 
-            <table className="w-full text-sm text-left border-collapse border border-black print-table">
+            <table className="w-full text-xs text-left border-collapse border border-black print-table">
+              <colgroup>
+                <col className="w-[3%]" />
+                <col className="w-[12%]" />
+                <col className="w-[28%]" />
+                <col className="w-[3%]" />
+                {dayColumns.map(d => (
+                  <col key={d} className="w-[1.5%]" />
+                ))}
+                <col className="w-[2%]" />
+                <col className="w-[2%]" />
+                <col className="w-[2%]" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th rowSpan={2} className="border border-black p-2 text-center w-8">No</th>
-                  <th rowSpan={2} className="border border-black p-2 w-24">NIS/NISN</th>
-                  <th rowSpan={2} className="border border-black p-2 w-48">Nama Lengkap</th>
-                  <th rowSpan={2} className="border border-black p-2 text-center w-8">L/P</th>
-                  <th colSpan={daysInMonth} className="border border-black p-1 text-center">Tanggal</th>
-                  <th colSpan={3} className="border border-black p-1 text-center">Keterangan</th>
+                  <th rowSpan={2} className="border border-black p-1 text-center font-bold">No</th>
+                  <th rowSpan={2} className="border border-black p-1 text-center font-bold">NIS/NISN</th>
+                  <th rowSpan={2} className="border border-black p-1 font-bold">Nama Lengkap</th>
+                  <th rowSpan={2} className="border border-black p-1 text-center font-bold">L/P</th>
+                  <th colSpan={daysInMonth} className="border border-black p-0.5 text-center font-bold">Tanggal</th>
+                  <th colSpan={3} className="border border-black p-0.5 text-center font-bold">Ket.</th>
                 </tr>
                 <tr>
                   {dayColumns.map(d => (
-                    <th key={d} className="border border-black p-1 text-center min-w-[20px] text-[10px] w-5">{d}</th>
+                    <th key={d} className="border border-black p-0.5 text-center text-[10px] print:text-[8px] font-semibold">{d}</th>
                   ))}
-                  <th className="border border-black p-1 text-center w-6 text-xs">S</th>
-                  <th className="border border-black p-1 text-center w-6 text-xs">I</th>
-                  <th className="border border-black p-1 text-center w-6 text-xs">A</th>
+                  <th className="border border-black p-0.5 text-center text-[10px] print:text-[8px] font-bold">S</th>
+                  <th className="border border-black p-0.5 text-center text-[10px] print:text-[8px] font-bold">I</th>
+                  <th className="border border-black p-0.5 text-center text-[10px] print:text-[8px] font-bold">A</th>
                 </tr>
               </thead>
               <tbody>
-                {classStudents.map((s, idx) => (
-                  <tr key={s.id}>
-                    <td className="border border-black p-1 text-center font-medium">{idx + 1}</td>
-                    <td className="border border-black p-1 text-xs">{s.nis && s.nisn ? `${s.nis} / ${s.nisn}` : (s.nis || s.nisn || '-')}</td>
-                    <td className="border border-black p-1 font-medium max-w-[200px] truncate">{s.name}</td>
-                    <td className="border border-black p-1 text-center">{s.gender}</td>
-                    {dayColumns.map(d => (
-                      <td key={d} className="border border-black p-1"></td>
-                    ))}
-                    <td className="border border-black p-1"></td>
-                    <td className="border border-black p-1"></td>
-                    <td className="border border-black p-1"></td>
-                  </tr>
-                ))}
+                {classStudents.map((s, idx) => {
+                  const len = s.name ? s.name.trim().length : 0;
+                  const nameFontClass = len > 32 
+                    ? "text-[8px] print:text-[7.5px] leading-tight" 
+                    : len > 24 
+                      ? "text-[9px] print:text-[8px] leading-tight" 
+                      : len > 18 
+                        ? "text-[10px] print:text-[8.5px] leading-tight" 
+                        : "text-xs print:text-[9px]";
+
+                  return (
+                    <tr key={s.id}>
+                      <td className="border border-black p-0.5 print:p-[1px] text-center font-medium text-[10px] print:text-[8px]">{idx + 1}</td>
+                      <td className="border border-black p-0.5 print:p-[1px] text-center text-[10px] print:text-[7.5px] font-mono leading-none">
+                        {s.nis && s.nisn ? `${s.nis}/${s.nisn}` : (s.nis || s.nisn || '-')}
+                      </td>
+                      <td className={`border border-black p-0.5 print:p-[1px] font-bold uppercase whitespace-normal break-words ${nameFontClass}`}>
+                        {s.name}
+                      </td>
+                      <td className="border border-black p-0.5 print:p-[1px] text-center font-medium text-[10px] print:text-[8px]">{s.gender}</td>
+                      {dayColumns.map(d => (
+                        <td key={d} className="border border-black p-0.5 print:p-[1px]"></td>
+                      ))}
+                      <td className="border border-black p-0.5 print:p-[1px]"></td>
+                      <td className="border border-black p-0.5 print:p-[1px]"></td>
+                      <td className="border border-black p-0.5 print:p-[1px]"></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
-            <div className="flex justify-between mt-12 px-8">
+            <div className="flex justify-between mt-6 print:mt-2 px-6 text-xs print:text-[8.5pt]">
               <div className="text-center">
-                <p className="mb-20">Mengetahui,<br/>Kepala Sekolah</p>
+                <p className="mb-12 print:mb-6">Mengetahui,<br/>Kepala Sekolah</p>
                 <p className="font-bold underline">_________________________</p>
                 <p>NIP. </p>
               </div>
               <div className="text-center">
-                <p className="mb-20">...................., .................... {selectedYear}<br/>Guru Kelas {selectedClass}</p>
+                <p className="mb-12 print:mb-6">...................., .................... {selectedYear}<br/>Guru Kelas {selectedClass}</p>
                 <p className="font-bold underline">_________________________</p>
                 <p>NIP. </p>
               </div>

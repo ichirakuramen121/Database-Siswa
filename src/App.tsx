@@ -206,16 +206,24 @@ function App() {
           <p className="text-indigo-900 font-medium">Sedang keluar...</p>
         </div>
       )}
+      {/* Mobile Backdrop Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 md:hidden animate-in fade-in transition-opacity"
+        />
+      )}
+
       {/* Mobile Top Bar */}
-      <div className="md:hidden bg-indigo-600/90 backdrop-blur-md text-white p-4 flex justify-between items-center no-print z-50">
-        <div className="flex items-center gap-2">
+      <div className="md:hidden bg-indigo-600/90 backdrop-blur-md text-white p-3.5 px-4 flex justify-between items-center no-print z-50 shadow-md">
+        <div className="flex items-center gap-2.5">
           {settings.schoolLogoUrl && (
             <img src={settings.schoolLogoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-cover bg-white" referrerPolicy="no-referrer" />
           )}
-          <h1 className="font-bold text-lg tracking-tight">{appName}</h1>
+          <h1 className="font-bold text-base tracking-tight truncate">{appName}</h1>
         </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition">
-          {isMobileMenuOpen ? <X /> : <Menu />}
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition active:scale-95">
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
@@ -292,7 +300,7 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 h-full">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 md:p-8 h-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

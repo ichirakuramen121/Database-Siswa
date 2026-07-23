@@ -328,7 +328,7 @@ export default function TeachersList() {
           <p className="text-gray-500 mt-1 font-medium">Kelola data tenaga pengajar beserta penugasan kelas.</p>
         </div>
         
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
           <input 
             type="file" 
             accept=".csv, .xlsx, .xls, .txt"
@@ -338,34 +338,34 @@ export default function TeachersList() {
           />
           <button 
             onClick={() => downloadTeacherExcelTemplate()} 
-            className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100/70 font-semibold text-sm shadow-sm transition active:scale-95 duration-150"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100/70 font-semibold text-xs sm:text-sm shadow-sm transition active:scale-95 duration-150"
           >
-            <FileSpreadsheet size={16} /> Template Excel (.xlsx)
+            <FileSpreadsheet size={16} /> <span className="truncate">Template Excel</span>
           </button>
           <button 
             onClick={downloadCSVTemplate} 
-            className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 font-medium text-sm transition active:scale-95 duration-150"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 font-medium text-xs sm:text-sm transition active:scale-95 duration-150"
           >
-            <DownloadCloud size={16} /> Template CSV
+            <DownloadCloud size={16} /> <span className="truncate">Template CSV</span>
           </button>
           <button 
             onClick={() => csvInputRef.current?.click()} 
-            className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-sm transition active:scale-95 duration-150"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-xs sm:text-sm transition active:scale-95 duration-150"
           >
-            <UploadCloud size={16} /> Import Excel / CSV
+            <UploadCloud size={16} /> <span className="truncate">Import File</span>
           </button>
           <button 
             onClick={() => exportTeachersToExcel(filteredTeachers, `Daftar_Guru_${new Date().toISOString().slice(0, 10)}.xlsx`)} 
-            className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 font-medium text-sm transition active:scale-95 duration-150"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 font-medium text-xs sm:text-sm transition active:scale-95 duration-150"
           >
-            <FileSpreadsheet size={16} /> Export ke Excel
+            <FileSpreadsheet size={16} /> <span className="truncate">Export Excel</span>
           </button>
           <button 
             onClick={handleOpenAddModal}
-            className="btn flex items-center justify-center w-full sm:w-auto gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95 duration-150 text-sm"
+            className="btn flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2.5 rounded-xl shadow-md transition-all active:scale-95 duration-150 text-xs sm:text-sm col-span-2 sm:col-span-1"
           >
             <Plus size={16} />
-            <span>Tambah Guru</span>
+            <span className="truncate">Tambah Guru</span>
           </button>
         </div>
       </div>

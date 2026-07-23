@@ -5,6 +5,7 @@ export interface Student {
   name: string;
   class: string; // 1A-6C
   gender: 'L' | 'P';
+  pob?: string;
   dob: string;
   address: string;
   parentName: string;

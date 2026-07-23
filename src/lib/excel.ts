@@ -64,6 +64,7 @@ export function parseCSVToStudents(text: string): Partial<Student>[] {
   let nameIdx = -1;
   let classIdx = -1;
   let genderIdx = -1;
+  let pobIdx = -1;
   let dobIdx = -1;
   let addressIdx = -1;
   let parentIdx = -1;
@@ -83,7 +84,8 @@ export function parseCSVToStudents(text: string): Partial<Student>[] {
       nisnIdx = nsnIdx;
       classIdx = cIdx;
       genderIdx = row.findIndex(c => c.includes('l/p') || c.includes('jk') || c.includes('gender') || c.includes('jenis kelamin'));
-      dobIdx = row.findIndex(c => c.includes('tgl') || c.includes('tanggal') || c.includes('dob') || c.includes('lahir'));
+      pobIdx = row.findIndex(c => c.includes('tempat') || c.includes('pob') || c.includes('tmp'));
+      dobIdx = row.findIndex(c => (c.includes('tgl') || c.includes('tanggal') || c.includes('dob')) || (c.includes('lahir') && !c.includes('tempat') && !c.includes('pob') && !c.includes('tmp')));
       addressIdx = row.findIndex(c => c.includes('alamat') || c.includes('address'));
       parentIdx = row.findIndex(c => c.includes('orang tua') || c.includes('ortu') || c.includes('parent') || c.includes('ayah') || c.includes('ibu'));
       statusIdx = row.findIndex(c => c.includes('status'));
@@ -103,6 +105,7 @@ export function parseCSVToStudents(text: string): Partial<Student>[] {
     let name = '';
     let sClass = '1A';
     let gender: 'L' | 'P' = 'L';
+    let pob = '';
     let dob = '';
     let address = '';
     let parentName = '';
@@ -116,12 +119,13 @@ export function parseCSVToStudents(text: string): Partial<Student>[] {
       if (genderIdx >= 0 && cells[genderIdx]) {
         gender = cells[genderIdx].toUpperCase().startsWith('P') ? 'P' : 'L';
       }
+      if (pobIdx >= 0 && cells[pobIdx]) pob = cells[pobIdx];
       if (dobIdx >= 0 && cells[dobIdx]) dob = cells[dobIdx];
       if (addressIdx >= 0 && cells[addressIdx]) address = cells[addressIdx];
       if (parentIdx >= 0 && cells[parentIdx]) parentName = cells[parentIdx];
       if (statusIdx >= 0 && cells[statusIdx]) statusRaw = cells[statusIdx];
     } else {
-      // Positional fallback: NIS, NISN, Nama, Kelas, L/P, DOB, Alamat, Ortu, Status
+      // Positional fallback: NIS, NISN, Nama, Kelas, L/P, Tempat Lahir, DOB, Alamat, Ortu, Status
       nis = cells[0] || '';
       nisn = cells[1] || '';
       name = cells[2] || '';
@@ -131,10 +135,11 @@ export function parseCSVToStudents(text: string): Partial<Student>[] {
       }
       sClass = cells[3] || '1A';
       gender = (cells[4] || 'L').toUpperCase().startsWith('P') ? 'P' : 'L';
-      dob = cells[5] || '';
-      address = cells[6] || '';
-      parentName = cells[7] || '';
-      statusRaw = cells[8] || 'Aktif';
+      pob = cells[5] || '';
+      dob = cells[6] || '';
+      address = cells[7] || '';
+      parentName = cells[8] || '';
+      statusRaw = cells[9] || 'Aktif';
     }
 
     sClass = sClass.toUpperCase().replace(/KELAS/g, '').replace(/[-_]/g, '').trim() || '1A';
@@ -151,6 +156,7 @@ export function parseCSVToStudents(text: string): Partial<Student>[] {
         name,
         class: sClass,
         gender,
+        pob: pob || undefined,
         dob: standardizeDate(dob),
         address,
         parentName,
@@ -258,6 +264,7 @@ export const downloadStudentExcelTemplate = (filename: string = 'Template_Import
       "Nama Lengkap": "Ahmad Fauzi",
       "Kelas": "1A",
       "L/P": "L",
+      "Tempat Lahir": "Bandung",
       "Tgl Lahir": "12/05/2015",
       "Alamat": "Jl. Merdeka No. 10",
       "Nama Orang Tua": "Slamet",
@@ -270,6 +277,7 @@ export const downloadStudentExcelTemplate = (filename: string = 'Template_Import
       "Nama Lengkap": "Siti Aminah",
       "Kelas": "1A",
       "L/P": "P",
+      "Tempat Lahir": "Jakarta",
       "Tgl Lahir": "22/08/2015",
       "Alamat": "Jl. Kenanga No. 4",
       "Nama Orang Tua": "Budi",
@@ -279,7 +287,7 @@ export const downloadStudentExcelTemplate = (filename: string = 'Template_Import
   ];
 
   const ws = XLSX.utils.json_to_sheet(exampleData, {
-    header: ["NIS", "NISN", "Nama Lengkap", "Kelas", "L/P", "Tgl Lahir", "Alamat", "Nama Orang Tua", "Status", "No Ijazah"]
+    header: ["NIS", "NISN", "Nama Lengkap", "Kelas", "L/P", "Tempat Lahir", "Tgl Lahir", "Alamat", "Nama Orang Tua", "Status", "No Ijazah"]
   });
 
   ws['!cols'] = [
@@ -288,6 +296,7 @@ export const downloadStudentExcelTemplate = (filename: string = 'Template_Import
     { wch: 25 },
     { wch: 10 },
     { wch: 8 },
+    { wch: 18 },
     { wch: 14 },
     { wch: 30 },
     { wch: 22 },
@@ -349,6 +358,7 @@ export const exportToExcel = (students: Student[], filename: string = 'data-sisw
     "Nama Lengkap": s.name,
     "Kelas": s.class,
     "L/P": s.gender,
+    "Tempat Lahir": s.pob || '-',
     "Tgl Lahir": s.dob,
     "Alamat": s.address,
     "Nama Orang Tua": s.parentName,
@@ -477,11 +487,17 @@ export const importFromExcel = (file: File): Promise<Partial<Student>[]> => {
           else if (statusRaw.toLowerCase().includes('pindah') || statusRaw.toLowerCase().includes('mutasi')) parsedStatus = 'Pindah';
           else if (statusRaw.toLowerCase().includes('keluar')) parsedStatus = 'Keluar';
 
+          const pobKey = Object.keys(row).find(k => {
+            const kl = k.toLowerCase();
+            return kl.includes('tempat') || kl.includes('pob') || kl.includes('tmp');
+          });
+          const pobRaw = String((pobKey ? row[pobKey] : (row['Tempat Lahir'] || '')) || '').trim();
+
           const dobKey = Object.keys(row).find(k => {
             const kl = k.toLowerCase();
-            return kl.includes('tgl') || kl.includes('tanggal') || kl.includes('dob') || kl.includes('lahir');
+            return (kl.includes('tgl') || kl.includes('tanggal') || kl.includes('dob')) || (kl.includes('lahir') && !kl.includes('tempat') && !kl.includes('pob') && !kl.includes('tmp'));
           });
-          const dobRaw = dobKey ? row[dobKey] : (row['Tgl Lahir'] || '');
+          const dobRaw = dobKey ? row[dobKey] : (row['Tgl Lahir'] || row['Tanggal Lahir'] || '');
 
           const nameKey = Object.keys(row).find(k => k.toLowerCase().includes('nama') && !k.toLowerCase().includes('orang tua') && !k.toLowerCase().includes('ortu'));
           const nisKey = Object.keys(row).find(k => k.toLowerCase().includes('nis') && !k.toLowerCase().includes('nisn'));
@@ -500,6 +516,7 @@ export const importFromExcel = (file: File): Promise<Partial<Student>[]> => {
             name: String((nameKey ? row[nameKey] : row['Nama Lengkap']) || row['Nama'] || ''),
             class: sClass,
             gender: String((genderKey ? row[genderKey] : row['L/P']) || row['Gender'] || 'L').toUpperCase().startsWith('P') ? 'P' : 'L',
+            pob: pobRaw || undefined,
             dob: standardizeDate(dobRaw),
             address: String((addressKey ? row[addressKey] : row['Alamat']) || ''),
             parentName: String((parentKey ? row[parentKey] : row['Nama Orang Tua']) || ''),

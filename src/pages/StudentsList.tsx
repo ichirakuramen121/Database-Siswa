@@ -108,10 +108,10 @@ export default function StudentsList() {
   );
 
   const downloadCSVTemplate = () => {
-    const headers = ["NIS", "NISN", "Nama Lengkap", "Kelas", "L/P", "Tgl Lahir (YYYY-MM-DD)", "Alamat", "Nama Orang Tua", "Status (Aktif/Lulus/Pindah/Keluar)"];
+    const headers = ["NIS", "NISN", "Nama Lengkap", "Kelas", "L/P", "Tempat Lahir", "Tgl Lahir (YYYY-MM-DD)", "Alamat", "Nama Orang Tua", "Status (Aktif/Lulus/Pindah/Keluar)"];
     const rows = [
-      ["252601001", "1234567890", "Ahmad Fauzi", "1A", "L", "2015-05-12", "Jl. Merdeka No. 10", "Slamet", "Aktif"],
-      ["252601002", "0987654321", "Siti Aminah", "1A", "P", "2015-08-22", "Jl. Kenanga No. 4", "Budi", "Aktif"]
+      ["252601001", "1234567890", "Ahmad Fauzi", "1A", "L", "Bandung", "2015-05-12", "Jl. Merdeka No. 10", "Slamet", "Aktif"],
+      ["252601002", "0987654321", "Siti Aminah", "1A", "P", "Jakarta", "2015-08-22", "Jl. Kenanga No. 4", "Budi", "Aktif"]
     ];
     
     // Create CSV payload
@@ -422,7 +422,7 @@ export default function StudentsList() {
           <p className="text-gray-500 mt-1 font-medium">Kelola data murid kelas 1-6.</p>
         </div>
         
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
           <input 
             type="file" 
             accept=".xlsx, .xls"
@@ -437,29 +437,29 @@ export default function StudentsList() {
             ref={csvInputRef}
             onChange={handleCSVImport}
           />
-          <button onClick={() => downloadStudentExcelTemplate()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100/70 font-semibold text-sm shadow-sm transition active:scale-95 duration-150">
-            <FileSpreadsheet size={16} /> Template Excel (.xlsx)
+          <button onClick={() => downloadStudentExcelTemplate()} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100/70 font-semibold text-xs sm:text-sm shadow-sm transition active:scale-95 duration-150">
+            <FileSpreadsheet size={16} /> <span className="truncate">Template Excel</span>
           </button>
-          <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl shadow-lg shadow-green-200/50 hover:bg-green-700 font-medium text-sm transition active:scale-95 duration-150">
-            <Upload size={16} /> Import Excel
+          <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-green-600 text-white rounded-xl shadow-lg shadow-green-200/50 hover:bg-green-700 font-medium text-xs sm:text-sm transition active:scale-95 duration-150">
+            <Upload size={16} /> <span className="truncate">Import Excel</span>
           </button>
-          <button onClick={downloadCSVTemplate} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 font-medium text-sm transition active:scale-95 duration-150">
-            <DownloadCloud size={16} /> Template CSV
+          <button onClick={downloadCSVTemplate} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 font-medium text-xs sm:text-sm transition active:scale-95 duration-150">
+            <DownloadCloud size={16} /> <span className="truncate">Template CSV</span>
           </button>
-          <button onClick={() => csvInputRef.current?.click()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-sm">
-            <UploadCloud size={16} /> Import CSV
+          <button onClick={() => csvInputRef.current?.click()} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-xs sm:text-sm">
+            <UploadCloud size={16} /> <span className="truncate">Import CSV</span>
           </button>
-          <button onClick={() => exportToExcel(filteredStudents, `Daftar_Siswa_dengan_NISN_${new Date().toISOString().slice(0, 10)}.xlsx`)} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 font-medium text-sm transition active:scale-95 duration-150">
-            <FileSpreadsheet size={16} /> Export ke Excel
+          <button onClick={() => exportToExcel(filteredStudents, `Daftar_Siswa_dengan_NISN_${new Date().toISOString().slice(0, 10)}.xlsx`)} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 font-medium text-xs sm:text-sm transition active:scale-95 duration-150">
+            <FileSpreadsheet size={16} /> <span className="truncate">Export Excel</span>
           </button>
-          <button onClick={() => downloadPDF()} className="btn-outline justify-center w-full sm:w-auto gap-2 text-indigo-600 border-indigo-100 hover:bg-indigo-50/50 text-sm">
-            <FileDown size={16} /> Download PDF
+          <button onClick={() => downloadPDF()} className="btn-outline justify-center gap-2 text-indigo-600 border-indigo-100 hover:bg-indigo-50/50 text-xs sm:text-sm px-3 py-2.5">
+            <FileDown size={16} /> <span className="truncate">PDF</span>
           </button>
-          <button onClick={() => setIsPrintListMode(true)} className="btn-outline justify-center w-full sm:w-auto text-sm">
-            <Printer size={16} /> Cetak
+          <button onClick={() => setIsPrintListMode(true)} className="btn-outline justify-center text-xs sm:text-sm px-3 py-2.5">
+            <Printer size={16} /> <span className="truncate">Cetak</span>
           </button>
-          <button onClick={() => handleOpenModal()} className="btn justify-center w-full sm:w-auto text-sm">
-            <Plus size={16} /> Tambah Siswa
+          <button onClick={() => handleOpenModal()} className="btn justify-center text-xs sm:text-sm px-3 py-2.5 col-span-2 sm:col-span-1">
+            <Plus size={16} /> <span className="truncate">Tambah Siswa</span>
           </button>
         </div>
       </div>
@@ -748,8 +748,10 @@ export default function StudentsList() {
                 <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 flex gap-3">
                   <Calendar size={18} className="text-indigo-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tanggal Lahir</span>
-                    <span className="text-sm font-semibold text-gray-800">{formatDate(viewingStudent.dob)}</span>
+                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tempat, Tanggal Lahir</span>
+                    <span className="text-sm font-semibold text-gray-800">
+                      {viewingStudent.pob ? `${viewingStudent.pob}, ` : ''}{formatDate(viewingStudent.dob)}
+                    </span>
                     {viewingStudent.dob && (
                       <span className="block text-xs text-indigo-600 font-semibold mt-1">Usia: {formatAge(viewingStudent.dob)}</span>
                     )}
@@ -898,6 +900,10 @@ export default function StudentsList() {
                       </select>
                     </div>
                     <div>
+                      <label className="label">Tempat Lahir</label>
+                      <input type="text" className="input" placeholder="mis. Bandung" value={currentStudent.pob || ''} onChange={e => setCurrentStudent({...currentStudent, pob: e.target.value})} />
+                    </div>
+                    <div>
                       <label className="label">Tanggal Lahir</label>
                       <input type="date" className="input" value={currentStudent.dob || ''} onChange={e => setCurrentStudent({...currentStudent, dob: e.target.value})} />
                     </div>
@@ -1016,7 +1022,7 @@ export default function StudentsList() {
                   <tr><td className="py-1 sm:py-2 font-semibold">Nama Lengkap</td><td className="py-1 sm:py-2">: {printStudent.name}</td></tr>
                   <tr><td className="py-1 sm:py-2 font-semibold">Kelas</td><td className="py-1 sm:py-2">: {printStudent.class}</td></tr>
                   <tr><td className="py-1 sm:py-2 font-semibold">Jenis Kelamin</td><td className="py-1 sm:py-2">: {printStudent.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</td></tr>
-                  <tr><td className="py-1 sm:py-2 font-semibold">Tanggal Lahir</td><td className="py-1 sm:py-2">: {formatDate(printStudent.dob)} {printStudent.dob && `(Usia: ${formatAge(printStudent.dob)})`}</td></tr>
+                  <tr><td className="py-1 sm:py-2 font-semibold">Tempat, Tanggal Lahir</td><td className="py-1 sm:py-2">: {printStudent.pob ? `${printStudent.pob}, ` : ''}{formatDate(printStudent.dob)} {printStudent.dob && `(Usia: ${formatAge(printStudent.dob)})`}</td></tr>
                   <tr><td className="py-1 sm:py-2 font-semibold">Nama Orang Tua</td><td className="py-1 sm:py-2">: {printStudent.parentName}</td></tr>
                   <tr><td className="py-1 sm:py-2 font-semibold align-top">Alamat</td><td className="py-1 sm:py-2">: {printStudent.address}</td></tr>
                   <tr><td className="py-1 sm:py-2 font-semibold">Status</td><td className="py-1 sm:py-2">: {printStudent.status}</td></tr>
@@ -1147,6 +1153,7 @@ export default function StudentsList() {
                         <th className="p-2">Nama</th>
                         <th className="p-2">Kelas</th>
                         <th className="p-2">L/P</th>
+                        <th className="p-2">Tempat Lahir</th>
                         <th className="p-2">Status</th>
                       </tr>
                     </thead>
@@ -1157,6 +1164,7 @@ export default function StudentsList() {
                           <td className="p-2 font-medium text-gray-800">{s.name || '-'}</td>
                           <td className="p-2 text-gray-600">{s.class || '1A'}</td>
                           <td className="p-2 text-gray-600">{s.gender || 'L'}</td>
+                          <td className="p-2 text-gray-600">{s.pob || '-'}</td>
                           <td className="p-2 text-gray-600">{s.status || 'Aktif'}</td>
                         </tr>
                       ))}

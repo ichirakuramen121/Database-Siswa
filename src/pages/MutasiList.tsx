@@ -34,6 +34,7 @@ export default function MutasiList() {
   const [masukName, setMasukName] = useState('');
   const [masukClass, setMasukClass] = useState('1A');
   const [masukGender, setMasukGender] = useState<'L' | 'P'>('L');
+  const [masukPob, setMasukPob] = useState('');
   const [masukDob, setMasukDob] = useState('');
   const [masukAddress, setMasukAddress] = useState('');
   const [masukParentName, setMasukParentName] = useState('');
@@ -106,6 +107,7 @@ export default function MutasiList() {
     setMasukName('');
     setMasukClass('1A');
     setMasukGender('L');
+    setMasukPob('');
     setMasukDob('');
     setMasukAddress('');
     setMasukParentName('');
@@ -161,6 +163,7 @@ export default function MutasiList() {
       name: masukName,
       class: masukClass,
       gender: masukGender,
+      pob: masukPob || undefined,
       dob: masukDob,
       address: masukAddress,
       parentName: masukParentName,
@@ -634,6 +637,16 @@ export default function MutasiList() {
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
+                      <label className="label">Tempat Lahir</label>
+                      <input 
+                        type="text" 
+                        placeholder="Kota tempat lahir..." 
+                        className="input" 
+                        value={masukPob}
+                        onChange={e => setMasukPob(e.target.value)}
+                      />
+                    </div>
+                    <div>
                       <label className="label">Tanggal Lahir</label>
                       <input 
                         type="date" 
@@ -642,16 +655,16 @@ export default function MutasiList() {
                         onChange={e => setMasukDob(e.target.value)}
                       />
                     </div>
-                    <div>
-                      <label className="label">Nama Orang Tua / Wali</label>
-                      <input 
-                        type="text" 
-                        placeholder="Nama Ayah/Ibu..." 
-                        className="input" 
-                        value={masukParentName}
-                        onChange={e => setMasukParentName(e.target.value)}
-                      />
-                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Nama Orang Tua / Wali</label>
+                    <input 
+                      type="text" 
+                      placeholder="Nama Ayah/Ibu..." 
+                      className="input" 
+                      value={masukParentName}
+                      onChange={e => setMasukParentName(e.target.value)}
+                    />
                   </div>
 
                   <div>

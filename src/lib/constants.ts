@@ -12,7 +12,7 @@ const SHEET_SISWA = "DataSiswa";
 const SHEET_GURU = "DataGuru";
 
 const STANDARD_SISWA_HEADERS = [
-  "id", "nis", "nisn", "name", "class", "gender", "dob", "address", 
+  "id", "nis", "nisn", "name", "class", "gender", "pob", "dob", "address", 
   "parentName", "status", "sekolahAsal", "sekolahTujuan", "tanggalMutasi", 
   "ijazahNo", "ijazahUrl", "berkasUrl", "kkUrl", "akteUrl", "fotoUrl",
   "createdAt", "updatedAt"

@@ -2,20 +2,29 @@
 
 @layer components {
   .btn {
-    @apply px-4 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200/50 hover:bg-indigo-700 transition inline-flex items-center justify-center gap-2 font-medium;
+    @apply px-4 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200/50 hover:bg-indigo-700 transition inline-flex items-center justify-center gap-2 font-medium text-sm;
   }
   .btn-outline {
-    @apply px-4 py-2 border border-white/80 bg-white/60 text-gray-700 rounded-xl hover:bg-white/80 shadow-sm transition inline-flex items-center justify-center gap-2 font-medium backdrop-blur-md;
+    @apply px-4 py-2 border border-white/80 bg-white/60 text-gray-700 rounded-xl hover:bg-white/80 shadow-sm transition inline-flex items-center justify-center gap-2 font-medium backdrop-blur-md text-sm;
   }
   .btn-danger {
-    @apply px-4 py-2.5 bg-rose-500 text-white rounded-xl hover:bg-rose-600 shadow-md transition inline-flex items-center justify-center gap-2 font-medium;
+    @apply px-4 py-2.5 bg-rose-500 text-white rounded-xl hover:bg-rose-600 shadow-md transition inline-flex items-center justify-center gap-2 font-medium text-sm;
   }
   .input {
-    @apply w-full bg-white/60 backdrop-blur-lg border border-white/80 px-4 py-2.5 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-400/50 focus:outline-none text-gray-800;
+    @apply w-full bg-white/60 backdrop-blur-lg border border-white/80 px-4 py-2.5 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-400/50 focus:outline-none text-gray-800 text-sm;
   }
   .label {
     @apply block text-[11px] font-bold text-indigo-700/80 mb-1 uppercase tracking-wider;
   }
+}
+
+/* Custom scrollbar utility for mobile */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @media print {
@@ -25,6 +34,8 @@
     overflow: visible !important;
     position: static !important;
     background: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   body * {
@@ -56,14 +67,29 @@
   }
   
   .print-table {
+    width: 100% !important;
     border-collapse: collapse !important;
+    table-layout: fixed !important;
+    page-break-inside: avoid !important;
   }
   .print-table th, .print-table td {
-    padding: 0.25rem !important; /* smaller padding for more columns */
-    font-size: 10pt !important;
+    padding: 1.5px 2px !important;
+    font-size: 8pt !important;
+    line-height: 1.15 !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
   }
+  
+  /* Force 1-page fit on landscape print */
   @page {
-    size: landscape; 
-    margin: 1cm;
+    size: A4 landscape; 
+    margin: 4mm 6mm;
+  }
+
+  .print-single-page {
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
   }
 }
