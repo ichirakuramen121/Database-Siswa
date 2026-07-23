@@ -89,10 +89,61 @@ function App() {
         setIsSyncingGlobal(true);
         const res = await fetchFromGAS(settings.scriptUrl, { action: 'pull' });
         if (isMounted) {
-          const fetchedStudents = res.students || res.data || [];
-          if (JSON.stringify(fetchedStudents) !== JSON.stringify(students)) {
-            setStudents(fetchedStudents);
+          const fetchedStudents: any[] = res.students || res.data || [];
+          const localStudents = useStore.getState().students;
+
+          let missingUrlsInRemote = false;
+          const mergedStudents = fetchedStudents.map((remote: any) => {
+            const local = localStudents.find(
+              s => (s.id && s.id === remote.id) || (s.nis && String(s.nis).trim() === String(remote.nis).trim())
+            );
+            if (!local) return remote;
+
+            const fotoUrl = remote.fotoUrl || local.fotoUrl || '';
+            const kkUrl = remote.kkUrl || local.kkUrl || '';
+            const akteUrl = remote.akteUrl || local.akteUrl || '';
+            const ijazahUrl = remote.ijazahUrl || local.ijazahUrl || '';
+            const berkasUrl = remote.berkasUrl || local.berkasUrl || '';
+
+            if ((!remote.fotoUrl && local.fotoUrl) || (!remote.kkUrl && local.kkUrl) || (!remote.akteUrl && local.akteUrl)) {
+              missingUrlsInRemote = true;
+            }
+
+            return {
+              ...remote,
+              id: remote.id || local.id,
+              fotoUrl,
+              kkUrl,
+              akteUrl,
+              ijazahUrl,
+              berkasUrl,
+            };
+          });
+
+          // Include any newly added local students that aren't on remote yet
+          localStudents.forEach(local => {
+            const exists = mergedStudents.some(
+              m => (m.id && m.id === local.id) || (m.nis && String(m.nis).trim() === String(local.nis).trim())
+            );
+            if (!exists) {
+              mergedStudents.push(local);
+              missingUrlsInRemote = true;
+            }
+          });
+
+          if (JSON.stringify(mergedStudents) !== JSON.stringify(localStudents)) {
+            setStudents(mergedStudents);
           }
+
+          // If remote had missing file URLs that local has, trigger sync to heal the Google Sheet!
+          if (missingUrlsInRemote && settings.scriptUrl) {
+            fetchFromGAS(settings.scriptUrl, {
+              action: 'sync',
+              data: mergedStudents,
+              teachers: useStore.getState().teachers
+            }).catch(e => console.error("Auto repair sync failed:", e));
+          }
+
           const fetchedTeachers = res.teachers || [];
           if (JSON.stringify(fetchedTeachers) !== JSON.stringify(teachers)) {
             setTeachers(fetchedTeachers);

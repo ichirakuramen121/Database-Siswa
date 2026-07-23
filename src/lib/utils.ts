@@ -17,22 +17,27 @@ for (let i = 1; i <= 6; i++) {
 export const STATUSES = ["Aktif", "Lulus", "Pindah", "Keluar"]; // Pindah represents mutasi
 
 export function standardizeDate(value: any): string {
-  if (!value) return '';
+  if (value === null || value === undefined) return '';
   
-  // If it's already a Date object
+  // If it's a JavaScript Date object
   if (value instanceof Date) {
     if (isNaN(value.getTime())) return '';
-    const y = value.getFullYear();
-    const m = String(value.getMonth() + 1).padStart(2, '0');
-    const d = String(value.getDate()).padStart(2, '0');
+    // Excel dates parsed by SheetJS use UTC midnight
+    const y = value.getUTCFullYear();
+    const m = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(value.getUTCDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
   }
 
-  // If it's a number (likely Excel serial number)
-  if (typeof value === 'number') {
-    // Excel base date is Dec 30, 1899 (due to Leap Year Bug)
+  // If it's a number or numeric string (likely Excel serial number e.g. 43620)
+  if (
+    typeof value === 'number' ||
+    (typeof value === 'string' && /^\d+(\.\d+)?$/.test(value.trim()) && Number(value) > 1000 && Number(value) < 100000)
+  ) {
+    const num = Number(value);
+    // Excel base epoch: Dec 30, 1899 (compensates for 1900 leap year bug)
     const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-    const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+    const date = new Date(excelEpoch.getTime() + Math.round(num) * 24 * 60 * 60 * 1000);
     if (!isNaN(date.getTime())) {
       const y = date.getUTCFullYear();
       const m = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -44,21 +49,25 @@ export function standardizeDate(value: any): string {
   let str = String(value).trim();
   if (!str || str === '-') return '';
 
-  // If it is an ISO/JSON serialized date e.g. "2019-06-03T17:00:00.000Z"
-  if (str.includes('T')) {
-    const datePart = str.split('T')[0];
+  // Handle ISO / timestamp strings with time e.g. "2019-06-04T00:00:00.000Z" or "2019-06-04 00:00:00"
+  if (str.includes('T') || str.includes(' ')) {
+    const datePart = str.split(/[T ]/)[0];
     if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
       return datePart;
     }
   }
 
-  // If it is exactly YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-    return str;
+  // YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
+  const ymdMatch = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (ymdMatch) {
+    const year = ymdMatch[1];
+    const month = ymdMatch[2].padStart(2, '0');
+    const day = ymdMatch[3].padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
-  // Handle formats like DD-MM-YYYY or DD/MM/YYYY or D/M/YYYY
-  const dmYMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  // DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY
+  const dmYMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
   if (dmYMatch) {
     const day = dmYMatch[1].padStart(2, '0');
     const month = dmYMatch[2].padStart(2, '0');
@@ -66,8 +75,7 @@ export function standardizeDate(value: any): string {
     return `${year}-${month}-${day}`;
   }
 
-  // Handle formats like MM-DD-YYYY or MM/DD/YYYY (US formats)
-  // We can attempt parsing using native Date and carefully extracting components
+  // Fallback native date parsing
   try {
     const parsed = new Date(str);
     if (!isNaN(parsed.getTime())) {
@@ -86,31 +94,58 @@ export function standardizeDate(value: any): string {
 export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return '-';
   const cleanDate = standardizeDate(dateString);
-  if (!cleanDate) return dateString;
+  if (!cleanDate) return String(dateString);
+
   try {
+    const match = cleanDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const day = parseInt(match[3], 10);
+      // Create local date object explicitly to avoid UTC timezone offset shifts
+      const d = new Date(year, month, day);
+      return d.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+
     const d = new Date(cleanDate);
-    if (isNaN(d.getTime())) return dateString;
+    if (isNaN(d.getTime())) return String(dateString);
     return d.toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
   } catch (e) {
-    return dateString;
+    return String(dateString);
   }
 }
 
 export function calculateAge(dobString: string | null | undefined): { years: number; months: number } | null {
   if (!dobString) return null;
+  const cleanDate = standardizeDate(dobString);
+  if (!cleanDate) return null;
+
   try {
-    const birthDate = new Date(dobString);
+    let birthDate: Date;
+    const match = cleanDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const day = parseInt(match[3], 10);
+      birthDate = new Date(year, month, day);
+    } else {
+      birthDate = new Date(cleanDate);
+    }
     if (isNaN(birthDate.getTime())) return null;
-    
+
     const today = new Date();
     let years = today.getFullYear() - birthDate.getFullYear();
     let months = today.getMonth() - birthDate.getMonth();
     let days = today.getDate() - birthDate.getDate();
-    
+
     if (days < 0) {
       months -= 1;
     }
@@ -118,7 +153,7 @@ export function calculateAge(dobString: string | null | undefined): { years: num
       years -= 1;
       months += 12;
     }
-    
+
     return { years, months };
   } catch (e) {
     return null;
@@ -134,7 +169,8 @@ export function formatAge(dobString: string | null | undefined): string {
 export function getGoogleDriveDirectImageUrl(url: string | null | undefined): string {
   if (!url) return '';
   const cleanUrl = String(url).trim().replace(/['"]/g, '');
-  // Convert Google Drive sharing link to a direct image endpoint that bypasses restrictions
+  if (cleanUrl.startsWith('data:image')) return cleanUrl;
+
   let id = '';
   const fileDMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (fileDMatch && fileDMatch[1]) {
@@ -148,6 +184,28 @@ export function getGoogleDriveDirectImageUrl(url: string | null | undefined): st
 
   if (id) {
     return `https://lh3.googleusercontent.com/d/${id}`;
+  }
+  return cleanUrl;
+}
+
+export function getGoogleDriveThumbnailUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  const cleanUrl = String(url).trim().replace(/['"]/g, '');
+  if (cleanUrl.startsWith('data:image')) return cleanUrl;
+
+  let id = '';
+  const fileDMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (fileDMatch && fileDMatch[1]) {
+    id = fileDMatch[1];
+  } else {
+    const idMatch = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (idMatch && idMatch[1]) {
+      id = idMatch[1];
+    }
+  }
+
+  if (id) {
+    return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
   }
   return cleanUrl;
 }

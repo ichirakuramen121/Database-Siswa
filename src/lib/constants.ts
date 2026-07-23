@@ -11,6 +11,17 @@ export const GAS_TEMPLATE = `// CODE UNTUK GOOGLE APPS SCRIPT (Code.gs)
 const SHEET_SISWA = "DataSiswa";
 const SHEET_GURU = "DataGuru";
 
+const STANDARD_SISWA_HEADERS = [
+  "id", "nis", "nisn", "name", "class", "gender", "dob", "address", 
+  "parentName", "status", "sekolahAsal", "sekolahTujuan", "tanggalMutasi", 
+  "ijazahNo", "ijazahUrl", "berkasUrl", "kkUrl", "akteUrl", "fotoUrl",
+  "createdAt", "updatedAt"
+];
+
+const STANDARD_GURU_HEADERS = [
+  "id", "nip", "name", "gender", "class", "phone", "email", "status", "createdAt", "updatedAt"
+];
+
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
@@ -18,25 +29,22 @@ function setup() {
   let sheetSiswa = ss.getSheetByName(SHEET_SISWA);
   if (!sheetSiswa) {
     sheetSiswa = ss.insertSheet(SHEET_SISWA);
-    sheetSiswa.appendRow([
-      "id", "nis", "nisn", "name", "class", "gender", "dob", "address", 
-      "parentName", "status", "sekolahAsal", "sekolahTujuan", "tanggalMutasi", "ijazahNo", "ijazahUrl", "berkasUrl", 
-      "kkUrl", "akteUrl", "fotoUrl",
-      "createdAt", "updatedAt"
-    ]);
-    sheetSiswa.getRange(1, 1, 1, 21).setFontWeight("bold");
+    sheetSiswa.appendRow(STANDARD_SISWA_HEADERS);
+    sheetSiswa.getRange(1, 1, 1, STANDARD_SISWA_HEADERS.length).setFontWeight("bold");
     sheetSiswa.setFrozenRows(1);
+  } else {
+    ensureHeaders(sheetSiswa, STANDARD_SISWA_HEADERS);
   }
   
   // Setup DataGuru Sheet
   let sheetGuru = ss.getSheetByName(SHEET_GURU);
   if (!sheetGuru) {
     sheetGuru = ss.insertSheet(SHEET_GURU);
-    sheetGuru.appendRow([
-      "id", "nip", "name", "gender", "class", "phone", "email", "status", "createdAt", "updatedAt"
-    ]);
-    sheetGuru.getRange(1, 1, 1, 10).setFontWeight("bold");
+    sheetGuru.appendRow(STANDARD_GURU_HEADERS);
+    sheetGuru.getRange(1, 1, 1, STANDARD_GURU_HEADERS.length).setFontWeight("bold");
     sheetGuru.setFrozenRows(1);
+  } else {
+    ensureHeaders(sheetGuru, STANDARD_GURU_HEADERS);
   }
 
   // Hapus default "Sheet1" jika ada dan kita punya sheet kita sendiri
@@ -51,6 +59,29 @@ function setup() {
   try {
     DriveApp.getRootFolder();
   } catch(e) {}
+}
+
+function ensureHeaders(sheet, standardHeaders) {
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  let headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  if (!headers || !headers[0]) {
+    sheet.getRange(1, 1, 1, standardHeaders.length).setValues([standardHeaders]).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    return standardHeaders;
+  }
+  
+  let updated = false;
+  standardHeaders.forEach(sh => {
+    if (headers.indexOf(sh) === -1) {
+      headers.push(sh);
+      updated = true;
+    }
+  });
+
+  if (updated) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight("bold");
+  }
+  return headers;
 }
 
 function doPost(e) {
@@ -74,42 +105,44 @@ function doPost(e) {
 
     if (payload.action === "setup") {
       setup();
-      return jsonResponse({ success: true, message: "Database dan semua sheet berhasil dibuat otomatis!" });
+      return jsonResponse({ success: true, message: "Database dan semua sheet berhasil dibuat/diperbarui otomatis!" });
     }
 
     if (payload.action === "sync") {
       // Sync students
       const records = payload.data; // Array of student objects
       if (records) {
+        const headers = ensureHeaders(sheetSiswa, STANDARD_SISWA_HEADERS);
         // Kosongkan baris lama (sisakan header)
         if (sheetSiswa.getLastRow() > 1) {
           sheetSiswa.getRange(2, 1, sheetSiswa.getLastRow() - 1, sheetSiswa.getLastColumn()).clearContent();
         }
         if (records.length > 0) {
-          const rows = records.map(s => [
-            s.id || "", s.nis || "", s.nisn || "", s.name || "", s.class || "", s.gender || "", 
-            s.dob || "", s.address || "", s.parentName || "", s.status || "", 
-            s.sekolahAsal || "", s.sekolahTujuan || "", s.tanggalMutasi || "",
-            s.ijazahNo || "", s.ijazahUrl || "", s.berkasUrl || "", 
-            s.kkUrl || "", s.akteUrl || "", s.fotoUrl || "",
-            s.createdAt || "", s.updatedAt || ""
-          ]);
-          sheetSiswa.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+          const rows = records.map(s => {
+            return headers.map(h => {
+              const val = s[h];
+              return (val !== undefined && val !== null) ? String(val) : "";
+            });
+          });
+          sheetSiswa.getRange(2, 1, rows.length, headers.length).setValues(rows);
         }
       }
 
       // Sync teachers jika dikirim
       const teachers = payload.teachers;
       if (teachers) {
+        const headers = ensureHeaders(sheetGuru, STANDARD_GURU_HEADERS);
         if (sheetGuru.getLastRow() > 1) {
           sheetGuru.getRange(2, 1, sheetGuru.getLastRow() - 1, sheetGuru.getLastColumn()).clearContent();
         }
         if (teachers.length > 0) {
-          const rows = teachers.map(t => [
-            t.id || "", t.nip || "", t.name || "", t.gender || "", t.class || "", 
-            t.phone || "", t.email || "", t.status || "", t.createdAt || "", t.updatedAt || ""
-          ]);
-          sheetGuru.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+          const rows = teachers.map(t => {
+            return headers.map(h => {
+              const val = t[h];
+              return (val !== undefined && val !== null) ? String(val) : "";
+            });
+          });
+          sheetGuru.getRange(2, 1, rows.length, headers.length).setValues(rows);
         }
       }
 
@@ -117,7 +150,7 @@ function doPost(e) {
     }
 
     if (payload.action === "pull") {
-      // Ambil data siswa
+      ensureHeaders(sheetSiswa, STANDARD_SISWA_HEADERS);
       const siswaData = sheetSiswa.getDataRange().getValues();
       const students = [];
       if (siswaData.length > 1) {
@@ -126,13 +159,13 @@ function doPost(e) {
           let row = siswaData[i];
           let obj = {};
           for (let j = 0; j < headers.length; j++) {
-            obj[headers[j]] = row[j];
+            if (headers[j]) obj[headers[j]] = row[j];
           }
           students.push(obj);
         }
       }
 
-      // Ambil data guru
+      ensureHeaders(sheetGuru, STANDARD_GURU_HEADERS);
       const guruData = sheetGuru.getDataRange().getValues();
       const teachers = [];
       if (guruData.length > 1) {
@@ -141,7 +174,7 @@ function doPost(e) {
           let row = guruData[i];
           let obj = {};
           for (let j = 0; j < headers.length; j++) {
-            obj[headers[j]] = row[j];
+            if (headers[j]) obj[headers[j]] = row[j];
           }
           teachers.push(obj);
         }
@@ -170,7 +203,7 @@ function doGet(e) {
       sheetGuru = ss.getSheetByName(SHEET_GURU);
     }
     
-    // Ambil data siswa
+    ensureHeaders(sheetSiswa, STANDARD_SISWA_HEADERS);
     const siswaData = sheetSiswa.getDataRange().getValues();
     const students = [];
     if (siswaData.length > 1) {
@@ -179,13 +212,13 @@ function doGet(e) {
         let row = siswaData[i];
         let obj = {};
         for (let j = 0; j < headers.length; j++) {
-          obj[headers[j]] = row[j];
+          if (headers[j]) obj[headers[j]] = row[j];
         }
         students.push(obj);
       }
     }
 
-    // Ambil data guru
+    ensureHeaders(sheetGuru, STANDARD_GURU_HEADERS);
     const guruData = sheetGuru.getDataRange().getValues();
     const teachers = [];
     if (guruData.length > 1) {
@@ -194,7 +227,7 @@ function doGet(e) {
         let row = guruData[i];
         let obj = {};
         for (let j = 0; j < headers.length; j++) {
-          obj[headers[j]] = row[j];
+          if (headers[j]) obj[headers[j]] = row[j];
         }
         teachers.push(obj);
       }

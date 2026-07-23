@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { Student } from '../types';
-import { CLASSES, STATUSES, generateId, cn, formatDate, formatAge, getGoogleDriveDirectImageUrl, standardizeDate, matchClass, getActiveClasses, getAllClasses } from '../lib/utils';
+import { CLASSES, STATUSES, generateId, cn, formatDate, formatAge, getGoogleDriveDirectImageUrl, getGoogleDriveThumbnailUrl, standardizeDate, matchClass, getActiveClasses, getAllClasses } from '../lib/utils';
 import { 
   Search, Plus, Filter, Download, Upload, Edit, Trash2, Printer, X, FileDown,
   ArrowUpDown, FileSpreadsheet, Eye, BookOpen, User, Calendar, MapPin, UserCheck, DownloadCloud, UploadCloud,
@@ -353,6 +353,8 @@ export default function StudentsList() {
     await triggerSync(currentStudents);
   };
 
+  const [uploadingState, setUploadingState] = useState<{ [key: string]: boolean }>({});
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'kk' | 'akte' | 'foto') => {
     if (!settings.scriptUrl) {
       alert("Atur Google Apps Script URL di pengaturan untuk mengaktifkan upload Drive.");
@@ -362,13 +364,31 @@ export default function StudentsList() {
     if (!file) return;
 
     try {
+      setUploadingState(prev => ({ ...prev, [type]: true }));
       const url = await uploadFileToGAS(settings.scriptUrl, file, settings.folderId, "SISWA_UPLOADS");
-      if (type === 'kk') setCurrentStudent(prev => ({ ...prev, kkUrl: url }));
-      if (type === 'akte') setCurrentStudent(prev => ({ ...prev, akteUrl: url }));
-      if (type === 'foto') setCurrentStudent(prev => ({ ...prev, fotoUrl: url }));
-      alert("Berkas berhasil diupload!");
+      
+      const updatedData: Partial<Student> = {};
+      if (type === 'kk') updatedData.kkUrl = url;
+      if (type === 'akte') updatedData.akteUrl = url;
+      if (type === 'foto') updatedData.fotoUrl = url;
+
+      // Update local state in modal
+      setCurrentStudent(prev => {
+        const next = { ...prev, ...updatedData };
+        // If student exists in system, immediately save to global store and sync to Google Sheets!
+        if (next.id) {
+          updateStudent(next.id, { ...updatedData, updatedAt: new Date().toISOString() });
+          const currentAll = useStore.getState().students;
+          triggerSync(currentAll);
+        }
+        return next;
+      });
+
+      alert(`Berkas ${type.toUpperCase()} berhasil diupload dan tersimpan otomatis ke Google Sheets!`);
     } catch (err: any) {
       alert("Gagal upload: " + err.message);
+    } finally {
+      setUploadingState(prev => ({ ...prev, [type]: false }));
     }
   };
 
@@ -516,7 +536,35 @@ export default function StudentsList() {
                       <div>{student.nis}</div>
                       {student.nisn && <div className="text-xs text-gray-400">{student.nisn}</div>}
                     </td>
-                    <td className="px-6 py-4 font-bold text-gray-900 group-hover:text-indigo-600 transition-colors border border-indigo-100">{student.name}</td>
+                    <td className="px-6 py-4 font-bold text-gray-900 group-hover:text-indigo-600 transition-colors border border-indigo-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center justify-center overflow-hidden shrink-0 font-extrabold text-xs shadow-sm relative">
+                          {student.fotoUrl ? (
+                            <img 
+                              src={getGoogleDriveDirectImageUrl(student.fotoUrl)} 
+                              alt={student.name} 
+                              className="w-full h-full object-cover" 
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                const fallback = getGoogleDriveThumbnailUrl(student.fotoUrl);
+                                if (target.src !== fallback) {
+                                  target.src = fallback;
+                                } else {
+                                  target.style.display = 'none';
+                                }
+                              }}
+                            />
+                          ) : (
+                            student.name ? student.name[0].toUpperCase() : 'S'
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{student.name}</div>
+                          {student.fotoUrl && <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">✓ Foto tersedia</span>}
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-4 py-4 text-center border border-indigo-100">
                        <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-black">{student.class}</span>
                     </td>
@@ -654,6 +702,13 @@ export default function StudentsList() {
                         alt="Foto" 
                         className="w-full h-full object-cover" 
                         referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          const fallback = getGoogleDriveThumbnailUrl(viewingStudent.fotoUrl);
+                          if (target.src !== fallback) {
+                            target.src = fallback;
+                          }
+                        }}
                       />
                     ) : (
                       <span className="text-3xl font-black text-indigo-300">{viewingStudent.name ? viewingStudent.name[0] : 'S'}</span>
@@ -876,23 +931,58 @@ export default function StudentsList() {
                     <div>
                        <label className="label">Upload KK (Opsional)</label>
                        <div className="flex gap-2">
-                          <input type="file" className="text-sm" onChange={e => handleFileUpload(e, 'kk')} />
+                          <input type="file" className="text-sm w-full" onChange={e => handleFileUpload(e, 'kk')} disabled={uploadingState['kk']} />
                        </div>
-                       {currentStudent.kkUrl && <a href={currentStudent.kkUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-block mt-1">Lihat KK Saat Ini</a>}
+                       {uploadingState['kk'] && <p className="text-xs text-indigo-600 font-bold animate-pulse mt-1">Mengupload KK ke Drive...</p>}
+                       {currentStudent.kkUrl && (
+                         <a href={currentStudent.kkUrl.trim().replace(/['"]/g, '')} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 font-bold hover:underline inline-flex items-center gap-1 mt-1 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100">
+                           <Eye size={12} /> Lihat KK saat ini ↗
+                         </a>
+                       )}
                     </div>
                     <div>
                        <label className="label">Upload Akte (Opsional)</label>
                        <div className="flex gap-2">
-                          <input type="file" className="text-sm" onChange={e => handleFileUpload(e, 'akte')} />
+                          <input type="file" className="text-sm w-full" onChange={e => handleFileUpload(e, 'akte')} disabled={uploadingState['akte']} />
                        </div>
-                       {currentStudent.akteUrl && <a href={currentStudent.akteUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-block mt-1">Lihat Akte Saat Ini</a>}
+                       {uploadingState['akte'] && <p className="text-xs text-indigo-600 font-bold animate-pulse mt-1">Mengupload Akte ke Drive...</p>}
+                       {currentStudent.akteUrl && (
+                         <a href={currentStudent.akteUrl.trim().replace(/['"]/g, '')} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 font-bold hover:underline inline-flex items-center gap-1 mt-1 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100">
+                           <Eye size={12} /> Lihat Akte saat ini ↗
+                         </a>
+                       )}
                     </div>
                     <div>
                          <label className="label">Upload Foto (Opsional)</label>
                          <div className="flex gap-2">
-                            <input type="file" accept="image/*" className="text-sm" onChange={e => handleFileUpload(e, 'foto')} />
+                            <input type="file" accept="image/*" className="text-sm w-full" onChange={e => handleFileUpload(e, 'foto')} disabled={uploadingState['foto']} />
                          </div>
-                         {currentStudent.fotoUrl && <a href={currentStudent.fotoUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-block mt-1">Lihat Foto Saat Ini</a>}
+                         {uploadingState['foto'] && <p className="text-xs text-indigo-600 font-bold animate-pulse mt-1">Mengupload Foto ke Drive...</p>}
+                         {currentStudent.fotoUrl && (
+                           <div className="mt-2 flex items-center gap-3 bg-indigo-50/70 p-2 rounded-xl border border-indigo-100">
+                             <img 
+                               src={getGoogleDriveDirectImageUrl(currentStudent.fotoUrl)} 
+                               alt="Preview Foto" 
+                               className="w-12 h-16 object-cover rounded-lg border border-indigo-200 shadow-sm"
+                               referrerPolicy="no-referrer"
+                               onError={(e) => {
+                                 const target = e.target as HTMLImageElement;
+                                 const fallback = getGoogleDriveThumbnailUrl(currentStudent.fotoUrl);
+                                 if (target.src !== fallback) {
+                                   target.src = fallback;
+                                 } else {
+                                   target.style.display = 'none';
+                                 }
+                               }}
+                             />
+                             <div>
+                               <span className="block text-[10px] font-bold text-indigo-500 uppercase">Foto Berhasil Diupload</span>
+                               <a href={currentStudent.fotoUrl.trim().replace(/['"]/g, '')} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 font-bold hover:underline inline-flex items-center gap-1 mt-0.5">
+                                 <Eye size={12} /> Buka di Drive ↗
+                               </a>
+                             </div>
+                           </div>
+                         )}
                     </div>
                   </div>
 
