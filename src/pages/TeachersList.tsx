@@ -6,8 +6,9 @@ import {
   GraduationCap, Phone, Mail, CheckCircle2, XCircle, Users,
   DownloadCloud, UploadCloud, FileSpreadsheet
 } from 'lucide-react';
+import { generateId } from '../lib/utils';
 import { fetchFromGAS } from '../lib/api';
-import { exportTeachersToExcel } from '../lib/excel';
+import { exportTeachersToExcel, parseCSVToTeachers } from '../lib/excel';
 
 export default function TeachersList() {
   const { teachers, settings, addTeacher, updateTeacher, deleteTeacher, setLoading, setIsSyncingGlobal } = useStore();
@@ -65,93 +66,78 @@ export default function TeachersList() {
     reader.onload = async (event) => {
       try {
         const text = event.target?.result as string;
-        const lines = text.split(/\r?\n/);
-        if (lines.length <= 1) {
-          alert("File CSV kosong atau format salah.");
-          return;
-        }
-
-        const newTeachers: Teacher[] = [];
-        const now = new Date().toISOString();
-
-        // Helper to parse line with proper quotes
-        const parseCSVLine = (line: string): string[] => {
-          const result: string[] = [];
-          let current = '';
-          let inQuotes = false;
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-              if (inQuotes && line[i + 1] === '"') {
-                current += '"';
-                i++;
-              } else {
-                inQuotes = !inQuotes;
-              }
-            } else if (char === ',' && !inQuotes) {
-              result.push(current.trim());
-              current = '';
-            } else {
-              current += char;
-            }
-          }
-          result.push(current.trim());
-          return result;
-        };
-
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-
-          const cells = parseCSVLine(line);
-          if (cells.length < 2) continue; // Must at least have NIP/Name
-
-          const nip = cells[0] || '';
-          const name = cells[1] || '';
-          if (!name) continue;
-
-          const gender = (cells[2] || 'L').toUpperCase() === 'P' ? 'P' : 'L';
-          const tClass = cells[3] || 'None';
-          const phone = cells[4] || '';
-          const email = cells[5] || '';
-          
-          const statusRaw = String(cells[6] || 'Aktif').trim();
-          let parsedStatus: 'Aktif' | 'Nonaktif' = 'Aktif';
-          if (statusRaw.toLowerCase().includes('non') || statusRaw.toLowerCase().includes('pasif') || statusRaw.toLowerCase().includes('tidak')) {
-            parsedStatus = 'Nonaktif';
-          }
-
-          newTeachers.push({
-            id: crypto.randomUUID(),
-            nip,
-            name,
-            gender,
-            class: tClass,
-            phone,
-            email,
-            status: parsedStatus,
-            createdAt: now,
-            updatedAt: now,
-          });
-        }
-
-        if (newTeachers.length === 0) {
+        const parsed = parseCSVToTeachers(text);
+        if (parsed.length === 0) {
           alert("Tidak ada data valid yang diimport.");
           return;
         }
 
-        newTeachers.forEach(t => addTeacher(t));
-        
+        const now = new Date().toISOString();
+        let addedCount = 0;
+        let updatedCount = 0;
+
         const currentTeachers = [...useStore.getState().teachers];
-        await triggerSync(currentTeachers);
-        
-        alert(`Berhasil mengimpor ${newTeachers.length} data guru!`);
+
+        for (const imp of parsed) {
+          const impNip = imp.nip ? String(imp.nip).trim() : '';
+          const impName = imp.name ? String(imp.name).trim().toLowerCase() : '';
+
+          if (!impName && !impNip) continue;
+
+          const existingIdx = currentTeachers.findIndex(e => {
+            const eNip = e.nip ? String(e.nip).trim() : '';
+            const eName = e.name ? String(e.name).trim().toLowerCase() : '';
+
+            if (impNip && eNip && impNip === eNip) return true;
+            if (impName && eName && impName === eName) return true;
+            return false;
+          });
+
+          if (existingIdx >= 0) {
+            const existing = currentTeachers[existingIdx];
+            const updated: Teacher = {
+              ...existing,
+              nip: impNip || existing.nip,
+              name: imp.name?.trim() || existing.name,
+              gender: imp.gender || existing.gender,
+              class: imp.class || existing.class,
+              phone: imp.phone || existing.phone,
+              email: imp.email || existing.email,
+              status: imp.status || existing.status,
+              updatedAt: now,
+            };
+            currentTeachers[existingIdx] = updated;
+            useStore.getState().updateTeacher(existing.id, updated);
+            updatedCount++;
+          } else {
+            const newTeacher: Teacher = {
+              id: generateId(),
+              nip: impNip,
+              name: imp.name?.trim() || 'Guru',
+              gender: imp.gender || 'L',
+              class: imp.class || 'None',
+              phone: imp.phone || '',
+              email: imp.email || '',
+              status: imp.status || 'Aktif',
+              createdAt: now,
+              updatedAt: now,
+            };
+            currentTeachers.push(newTeacher);
+            useStore.getState().addTeacher(newTeacher);
+            addedCount++;
+          }
+        }
+
+        const finalTeachers = useStore.getState().teachers;
+        await triggerSync(finalTeachers);
+        alert(`Proses Import Guru Selesai!\n• ${addedCount} data baru ditambahkan\n• ${updatedCount} data lama diperbarui/ditimpa`);
       } catch (err: any) {
-        alert("Gagal mengimpor CSV: " + err.message);
+        console.error(err);
+        alert("Gagal mengimpor file CSV: " + (err?.message || err));
       }
     };
     reader.readAsText(file);
-    if (e.target) e.target.value = '';
+    if (csvInputRef.current) csvInputRef.current.value = '';
   };
 
   // Sync to sheets immediately when data is changed

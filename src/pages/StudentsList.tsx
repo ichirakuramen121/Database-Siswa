@@ -7,7 +7,7 @@ import {
   ArrowUpDown, FileSpreadsheet, Eye, BookOpen, User, Calendar, MapPin, UserCheck, DownloadCloud, UploadCloud,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { exportToExcel, importFromExcel } from '../lib/excel';
+import { exportToExcel, importFromExcel, parseCSVToStudents } from '../lib/excel';
 import { uploadFileToGAS, fetchFromGAS } from '../lib/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -119,6 +119,83 @@ export default function StudentsList() {
     document.body.removeChild(link);
   };
 
+  const processStudentImport = async (parsed: Partial<Student>[]) => {
+    if (parsed.length === 0) {
+      alert("Tidak ada data valid yang diimport.");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    const currentStudents = [...useStore.getState().students];
+
+    for (const imp of parsed) {
+      const impNis = imp.nis ? String(imp.nis).trim() : '';
+      const impNisn = imp.nisn ? String(imp.nisn).trim() : '';
+      const impName = imp.name ? String(imp.name).trim().toLowerCase() : '';
+
+      if (!impName && !impNis && !impNisn) continue;
+
+      const existingIdx = currentStudents.findIndex(e => {
+        const eNis = e.nis ? String(e.nis).trim() : '';
+        const eNisn = e.nisn ? String(e.nisn).trim() : '';
+        const eName = e.name ? String(e.name).trim().toLowerCase() : '';
+
+        if (impNis && eNis && impNis === eNis) return true;
+        if (impNisn && eNisn && impNisn === eNisn) return true;
+        if (impName && eName && impName === eName) return true;
+        return false;
+      });
+
+      if (existingIdx >= 0) {
+        const existing = currentStudents[existingIdx];
+        const updated: Student = {
+          ...existing,
+          nis: impNis || existing.nis,
+          nisn: impNisn || existing.nisn,
+          name: imp.name?.trim() || existing.name,
+          class: imp.class || existing.class,
+          gender: imp.gender || existing.gender,
+          dob: imp.dob || existing.dob,
+          address: imp.address || existing.address,
+          parentName: imp.parentName || existing.parentName,
+          status: imp.status || existing.status,
+          ijazahNo: imp.ijazahNo || existing.ijazahNo,
+          updatedAt: now,
+        };
+        currentStudents[existingIdx] = updated;
+        useStore.getState().updateStudent(existing.id, updated);
+        updatedCount++;
+      } else {
+        const newStudent: Student = {
+          id: generateId(),
+          nis: impNis,
+          nisn: impNisn,
+          name: imp.name?.trim() || 'Siswa',
+          class: imp.class || '1A',
+          gender: imp.gender || 'L',
+          dob: imp.dob || '',
+          address: imp.address || '',
+          parentName: imp.parentName || '',
+          status: imp.status || 'Aktif',
+          ijazahNo: imp.ijazahNo || '',
+          createdAt: now,
+          updatedAt: now,
+        };
+        currentStudents.push(newStudent);
+        useStore.getState().addStudent(newStudent);
+        addedCount++;
+      }
+    }
+
+    const finalStudents = useStore.getState().students;
+    await triggerSync(finalStudents);
+
+    alert(`Proses Import Selesai!\n• ${addedCount} data baru ditambahkan\n• ${updatedCount} data lama diperbarui/ditimpa`);
+  };
+
   const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -127,87 +204,8 @@ export default function StudentsList() {
     reader.onload = async (event) => {
       try {
         const text = event.target?.result as string;
-        const lines = text.split(/\r?\n/);
-        if (lines.length <= 1) {
-          alert("File CSV kosong atau format salah.");
-          return;
-        }
-
-        const newStudents: Student[] = [];
-        const now = new Date().toISOString();
-
-        // Helper to parse line with proper quotes
-        const parseCSVLine = (line: string): string[] => {
-          const result: string[] = [];
-          let current = '';
-          let inQuotes = false;
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-              if (inQuotes && line[i + 1] === '"') {
-                current += '"';
-                i++;
-              } else {
-                inQuotes = !inQuotes;
-              }
-            } else if (char === ',' && !inQuotes) {
-              result.push(current.trim());
-              current = '';
-            } else {
-              current += char;
-            }
-          }
-          result.push(current.trim());
-          return result;
-        };
-
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-
-          const cells = parseCSVLine(line);
-          if (cells.length < 3) continue; // Must at least have NIS, Name
-
-          const nis = cells[0] || '';
-          const nisn = cells[1] || '';
-          const name = cells[2] || '';
-          const sClass = cells[3] || '1A';
-          const gender = (cells[4] || 'L').toUpperCase() === 'P' ? 'P' : 'L';
-          const dob = cells[5] || '';
-          const address = cells[6] || '';
-          const parentName = cells[7] || '';
-          
-          const statusRaw = String(cells[8] || 'Aktif').trim();
-          let parsedStatus: 'Aktif' | 'Lulus' | 'Pindah' | 'Keluar' = 'Aktif';
-          if (statusRaw.toLowerCase().includes('lulus')) parsedStatus = 'Lulus';
-          else if (statusRaw.toLowerCase().includes('pindah') || statusRaw.toLowerCase().includes('mutasi')) parsedStatus = 'Pindah';
-          else if (statusRaw.toLowerCase().includes('keluar')) parsedStatus = 'Keluar';
-
-          newStudents.push({
-            id: generateId(),
-            nis,
-            nisn,
-            name,
-            class: sClass,
-            gender,
-            dob: standardizeDate(dob),
-            address,
-            parentName,
-            status: parsedStatus,
-            createdAt: now,
-            updatedAt: now,
-          });
-        }
-
-        if (newStudents.length === 0) {
-          alert("Tidak ada data valid yang diimport.");
-          return;
-        }
-
-        newStudents.forEach(s => addStudent(s));
-        const currentStudents = useStore.getState().students;
-        await triggerSync(currentStudents);
-        alert(`Berhasil mengimpor ${newStudents.length} siswa dari CSV!`);
+        const parsed = parseCSVToStudents(text);
+        await processStudentImport(parsed);
       } catch (err) {
         console.error(err);
         alert("Gagal mengimpor file CSV.");
@@ -312,22 +310,11 @@ export default function StudentsList() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const newStudents = await importFromExcel(file);
-      const now = new Date().toISOString();
-      newStudents.forEach(s => {
-        addStudent({
-          ...s,
-          id: generateId(),
-          createdAt: now,
-          updatedAt: now,
-        } as Student);
-      });
-      alert(`Berhasil mengimport ${newStudents.length} siswa`);
-      
-      const currentStudents = useStore.getState().students;
-      await triggerSync(currentStudents);
+      const parsed = await importFromExcel(file);
+      await processStudentImport(parsed);
     } catch (err) {
-      alert("Gagal import");
+      console.error(err);
+      alert("Gagal import file Excel");
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };

@@ -1,6 +1,254 @@
 import * as XLSX from 'xlsx';
-import { Student } from '../types';
+import { Student, Teacher } from '../types';
 import { standardizeDate } from './utils';
+
+export function detectDelimiter(text: string): string {
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0).slice(0, 10);
+  let semicolons = 0;
+  let commas = 0;
+  let tabs = 0;
+
+  for (const line of lines) {
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') inQuotes = !inQuotes;
+      else if (!inQuotes) {
+        if (char === ';') semicolons++;
+        else if (char === ',') commas++;
+        else if (char === '\t') tabs++;
+      }
+    }
+  }
+
+  if (semicolons > commas && semicolons > tabs) return ';';
+  if (tabs > commas && tabs > semicolons) return '\t';
+  return ',';
+}
+
+export function parseCSVLine(line: string, delimiter: string = ','): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === delimiter && !inQuotes) {
+      result.push(current.trim().replace(/^["']|["']$/g, ''));
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim().replace(/^["']|["']$/g, ''));
+  return result;
+}
+
+export function parseCSVToStudents(text: string): Partial<Student>[] {
+  const delimiter = detectDelimiter(text);
+  const rawLines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (rawLines.length === 0) return [];
+
+  const parsedRows = rawLines.map(l => parseCSVLine(l, delimiter));
+  
+  let headerRowIdx = -1;
+  let nisIdx = -1;
+  let nisnIdx = -1;
+  let nameIdx = -1;
+  let classIdx = -1;
+  let genderIdx = -1;
+  let dobIdx = -1;
+  let addressIdx = -1;
+  let parentIdx = -1;
+  let statusIdx = -1;
+
+  for (let r = 0; r < Math.min(parsedRows.length, 5); r++) {
+    const row = parsedRows[r].map(c => c.toLowerCase());
+    const nIdx = row.findIndex(c => (c.includes('nama') || c.includes('name')) && !c.includes('orang tua') && !c.includes('ortu'));
+    const nsIdx = row.findIndex(c => c.includes('nis') && !c.includes('nisn'));
+    const nsnIdx = row.findIndex(c => c.includes('nisn'));
+    const cIdx = row.findIndex(c => c.includes('kelas') || c.includes('class'));
+
+    if (nIdx >= 0 || nsIdx >= 0 || nsnIdx >= 0 || cIdx >= 0) {
+      headerRowIdx = r;
+      nameIdx = nIdx;
+      nisIdx = nsIdx;
+      nisnIdx = nsnIdx;
+      classIdx = cIdx;
+      genderIdx = row.findIndex(c => c.includes('l/p') || c.includes('jk') || c.includes('gender') || c.includes('jenis kelamin'));
+      dobIdx = row.findIndex(c => c.includes('tgl') || c.includes('tanggal') || c.includes('dob') || c.includes('lahir'));
+      addressIdx = row.findIndex(c => c.includes('alamat') || c.includes('address'));
+      parentIdx = row.findIndex(c => c.includes('orang tua') || c.includes('ortu') || c.includes('parent') || c.includes('ayah') || c.includes('ibu'));
+      statusIdx = row.findIndex(c => c.includes('status'));
+      break;
+    }
+  }
+
+  const startIdx = headerRowIdx >= 0 ? headerRowIdx + 1 : 0;
+  const result: Partial<Student>[] = [];
+
+  for (let i = startIdx; i < parsedRows.length; i++) {
+    const cells = parsedRows[i];
+    if (!cells || cells.length === 0 || cells.every(c => !c)) continue;
+
+    let nis = '';
+    let nisn = '';
+    let name = '';
+    let sClass = '1A';
+    let gender: 'L' | 'P' = 'L';
+    let dob = '';
+    let address = '';
+    let parentName = '';
+    let statusRaw = 'Aktif';
+
+    if (headerRowIdx >= 0) {
+      if (nisIdx >= 0 && cells[nisIdx]) nis = cells[nisIdx];
+      if (nisnIdx >= 0 && cells[nisnIdx]) nisn = cells[nisnIdx];
+      if (nameIdx >= 0 && cells[nameIdx]) name = cells[nameIdx];
+      if (classIdx >= 0 && cells[classIdx]) sClass = cells[classIdx];
+      if (genderIdx >= 0 && cells[genderIdx]) {
+        gender = cells[genderIdx].toUpperCase().startsWith('P') ? 'P' : 'L';
+      }
+      if (dobIdx >= 0 && cells[dobIdx]) dob = cells[dobIdx];
+      if (addressIdx >= 0 && cells[addressIdx]) address = cells[addressIdx];
+      if (parentIdx >= 0 && cells[parentIdx]) parentName = cells[parentIdx];
+      if (statusIdx >= 0 && cells[statusIdx]) statusRaw = cells[statusIdx];
+    } else {
+      // Positional fallback: NIS, NISN, Nama, Kelas, L/P, DOB, Alamat, Ortu, Status
+      nis = cells[0] || '';
+      nisn = cells[1] || '';
+      name = cells[2] || '';
+      if (!name && cells[1] && isNaN(Number(cells[1]))) {
+        name = cells[1];
+        nisn = '';
+      }
+      sClass = cells[3] || '1A';
+      gender = (cells[4] || 'L').toUpperCase().startsWith('P') ? 'P' : 'L';
+      dob = cells[5] || '';
+      address = cells[6] || '';
+      parentName = cells[7] || '';
+      statusRaw = cells[8] || 'Aktif';
+    }
+
+    sClass = sClass.toUpperCase().replace(/KELAS/g, '').replace(/[-_]/g, '').trim() || '1A';
+
+    let parsedStatus: 'Aktif' | 'Lulus' | 'Pindah' | 'Keluar' = 'Aktif';
+    if (statusRaw.toLowerCase().includes('lulus')) parsedStatus = 'Lulus';
+    else if (statusRaw.toLowerCase().includes('pindah') || statusRaw.toLowerCase().includes('mutasi')) parsedStatus = 'Pindah';
+    else if (statusRaw.toLowerCase().includes('keluar')) parsedStatus = 'Keluar';
+
+    if (name || nis || nisn) {
+      result.push({
+        nis,
+        nisn,
+        name,
+        class: sClass,
+        gender,
+        dob: standardizeDate(dob),
+        address,
+        parentName,
+        status: parsedStatus,
+      });
+    }
+  }
+
+  return result;
+}
+
+export function parseCSVToTeachers(text: string): Partial<Teacher>[] {
+  const delimiter = detectDelimiter(text);
+  const rawLines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (rawLines.length === 0) return [];
+
+  const parsedRows = rawLines.map(l => parseCSVLine(l, delimiter));
+
+  let headerRowIdx = -1;
+  let nipIdx = -1;
+  let nameIdx = -1;
+  let genderIdx = -1;
+  let classIdx = -1;
+  let phoneIdx = -1;
+  let emailIdx = -1;
+  let statusIdx = -1;
+
+  for (let r = 0; r < Math.min(parsedRows.length, 5); r++) {
+    const row = parsedRows[r].map(c => c.toLowerCase());
+    const npIdx = row.findIndex(c => c.includes('nip'));
+    const nmIdx = row.findIndex(c => c.includes('nama') || c.includes('name'));
+
+    if (npIdx >= 0 || nmIdx >= 0) {
+      headerRowIdx = r;
+      nipIdx = npIdx;
+      nameIdx = nmIdx;
+      genderIdx = row.findIndex(c => c.includes('l/p') || c.includes('jk') || c.includes('gender'));
+      classIdx = row.findIndex(c => c.includes('kelas') || c.includes('wali') || c.includes('class'));
+      phoneIdx = row.findIndex(c => c.includes('telp') || c.includes('phone') || c.includes('hp') || c.includes('wa'));
+      emailIdx = row.findIndex(c => c.includes('email'));
+      statusIdx = row.findIndex(c => c.includes('status'));
+      break;
+    }
+  }
+
+  const startIdx = headerRowIdx >= 0 ? headerRowIdx + 1 : 0;
+  const result: Partial<Teacher>[] = [];
+
+  for (let i = startIdx; i < parsedRows.length; i++) {
+    const cells = parsedRows[i];
+    if (!cells || cells.length === 0 || cells.every(c => !c)) continue;
+
+    let nip = '';
+    let name = '';
+    let gender: 'L' | 'P' = 'L';
+    let assignedClass = 'None';
+    let phone = '';
+    let email = '';
+    let statusRaw = 'Aktif';
+
+    if (headerRowIdx >= 0) {
+      if (nipIdx >= 0 && cells[nipIdx]) nip = cells[nipIdx];
+      if (nameIdx >= 0 && cells[nameIdx]) name = cells[nameIdx];
+      if (genderIdx >= 0 && cells[genderIdx]) {
+        gender = cells[genderIdx].toUpperCase().startsWith('P') ? 'P' : 'L';
+      }
+      if (classIdx >= 0 && cells[classIdx]) assignedClass = cells[classIdx];
+      if (phoneIdx >= 0 && cells[phoneIdx]) phone = cells[phoneIdx];
+      if (emailIdx >= 0 && cells[emailIdx]) email = cells[emailIdx];
+      if (statusIdx >= 0 && cells[statusIdx]) statusRaw = cells[statusIdx];
+    } else {
+      nip = cells[0] || '';
+      name = cells[1] || '';
+      gender = (cells[2] || 'L').toUpperCase().startsWith('P') ? 'P' : 'L';
+      assignedClass = cells[3] || 'None';
+      phone = cells[4] || '';
+      email = cells[5] || '';
+      statusRaw = cells[6] || 'Aktif';
+    }
+
+    assignedClass = assignedClass.toUpperCase().replace(/KELAS/g, '').replace(/[-_]/g, '').trim() || 'None';
+    const status: 'Aktif' | 'Nonaktif' = statusRaw.toLowerCase().includes('non') ? 'Nonaktif' : 'Aktif';
+
+    if (name || nip) {
+      result.push({
+        nip,
+        name,
+        gender,
+        class: assignedClass,
+        phone,
+        email,
+        status,
+      });
+    }
+  }
+
+  return result;
+}
 
 export const exportToExcel = (students: Student[], filename: string = 'data-siswa.xlsx') => {
   const ws = XLSX.utils.json_to_sheet(students.map(s => ({
@@ -44,6 +292,22 @@ export const exportTeachersToExcel = (teachers: any[], filename: string = 'data-
 export const importFromExcel = (file: File): Promise<Partial<Student>[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+
+    if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string;
+          const students = parseCSVToStudents(text);
+          resolve(students);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsText(file);
+      return;
+    }
+
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
@@ -54,31 +318,41 @@ export const importFromExcel = (file: File): Promise<Partial<Student>[]> => {
 
         const mapped = json.map(row => {
           let statusRaw = String(row['Status'] || 'Aktif').trim();
-          let parsedStatus = 'Aktif';
+          let parsedStatus: 'Aktif' | 'Lulus' | 'Pindah' | 'Keluar' = 'Aktif';
           if (statusRaw.toLowerCase().includes('lulus')) parsedStatus = 'Lulus';
           else if (statusRaw.toLowerCase().includes('pindah') || statusRaw.toLowerCase().includes('mutasi')) parsedStatus = 'Pindah';
           else if (statusRaw.toLowerCase().includes('keluar')) parsedStatus = 'Keluar';
 
-          // Fuzzy match for dob/tgl lahir header
           const dobKey = Object.keys(row).find(k => {
             const kl = k.toLowerCase();
             return kl.includes('tgl') || kl.includes('tanggal') || kl.includes('dob') || kl.includes('lahir');
           });
           const dobRaw = dobKey ? row[dobKey] : (row['Tgl Lahir'] || '');
 
+          const nameKey = Object.keys(row).find(k => k.toLowerCase().includes('nama') && !k.toLowerCase().includes('orang tua') && !k.toLowerCase().includes('ortu'));
+          const nisKey = Object.keys(row).find(k => k.toLowerCase().includes('nis') && !k.toLowerCase().includes('nisn'));
+          const nisnKey = Object.keys(row).find(k => k.toLowerCase().includes('nisn'));
+          const classKey = Object.keys(row).find(k => k.toLowerCase().includes('kelas') || k.toLowerCase().includes('class'));
+          const genderKey = Object.keys(row).find(k => k.toLowerCase().includes('l/p') || k.toLowerCase().includes('jk') || k.toLowerCase().includes('gender'));
+          const addressKey = Object.keys(row).find(k => k.toLowerCase().includes('alamat') || k.toLowerCase().includes('address'));
+          const parentKey = Object.keys(row).find(k => k.toLowerCase().includes('orang tua') || k.toLowerCase().includes('ortu') || k.toLowerCase().includes('parent'));
+
+          let sClass = String((classKey ? row[classKey] : row['Kelas']) || '1A');
+          sClass = sClass.toUpperCase().replace(/KELAS/g, '').replace(/[-_]/g, '').trim() || '1A';
+
           return {
-            nis: String(row['NIS'] || row['Nis'] || ''),
-            nisn: String(row['NISN'] || row['Nisn'] || ''),
-            name: row['Nama Lengkap'] || row['Nama'] || '',
-            class: row['Kelas'] || '',
-            gender: String(row['L/P'] || row['Gender'] || 'L').toUpperCase().startsWith('P') ? 'P' : 'L',
+            nis: String((nisKey ? row[nisKey] : row['NIS']) || row['Nis'] || ''),
+            nisn: String((nisnKey ? row[nisnKey] : row['NISN']) || row['Nisn'] || ''),
+            name: String((nameKey ? row[nameKey] : row['Nama Lengkap']) || row['Nama'] || ''),
+            class: sClass,
+            gender: String((genderKey ? row[genderKey] : row['L/P']) || row['Gender'] || 'L').toUpperCase().startsWith('P') ? 'P' : 'L',
             dob: standardizeDate(dobRaw),
-            address: row['Alamat'] || '',
-            parentName: row['Nama Orang Tua'] || '',
+            address: String((addressKey ? row[addressKey] : row['Alamat']) || ''),
+            parentName: String((parentKey ? row[parentKey] : row['Nama Orang Tua']) || ''),
             status: parsedStatus,
             ijazahNo: row['No Ijazah'] && row['No Ijazah'] !== '-' ? String(row['No Ijazah']) : undefined,
           } as Partial<Student>;
-        });
+        }).filter(s => s.name || s.nis || s.nisn);
 
         resolve(mapped);
       } catch (err) {
