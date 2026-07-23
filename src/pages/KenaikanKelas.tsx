@@ -4,6 +4,7 @@ import { CLASSES, cn, matchClass, matchStatusActive } from '../lib/utils';
 import { Student } from '../types';
 import { Users, ArrowUpCircle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { fetchFromGAS } from '../lib/api';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function KenaikanKelas() {
   const { 
@@ -134,34 +135,52 @@ export default function KenaikanKelas() {
            </div>
            
            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden max-h-[400px] overflow-y-auto">
-             <table className="w-full text-sm text-left border-collapse">
-               <thead className="bg-gray-50/80 z-10 sticky top-0">
-                 <tr className="text-gray-500 text-xs uppercase tracking-wider">
-                   <th className="px-6 py-3 font-semibold">No</th>
-                   <th className="px-6 py-3 font-semibold">NIS/NISN</th>
-                   <th className="px-6 py-3 font-semibold">Nama Lengkap</th>
-                   <th className="px-6 py-3 font-semibold text-center">L/P</th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-100">
-                  {classStudents.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                        Tidak ada siswa aktif di kelas ini.
-                      </td>
-                    </tr>
-                  ) : (
-                    classStudents.map((s, idx) => (
-                      <tr key={s.id} className="hover:bg-indigo-50/30">
-                        <td className="px-6 py-3 text-center text-gray-500 font-medium">{idx + 1}</td>
-                        <td className="px-6 py-3 font-mono text-gray-600">{s.nis}</td>
-                        <td className="px-6 py-3 font-semibold text-gray-800">{s.name}</td>
-                        <td className="px-6 py-3 text-gray-600 text-center">{s.gender}</td>
+             <AnimatePresence mode="wait">
+               <motion.table 
+                 key={selectedClass}
+                 initial={{ opacity: 0, y: 8 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 exit={{ opacity: 0, y: -8 }}
+                 transition={{ duration: 0.15 }}
+                 className="w-full text-sm text-left border-collapse"
+               >
+                 <thead className="bg-gray-50/80 z-10 sticky top-0">
+                   <tr className="text-gray-500 text-xs uppercase tracking-wider">
+                     <th className="px-6 py-3 font-semibold">No</th>
+                     <th className="px-6 py-3 font-semibold">NIS/NISN</th>
+                     <th className="px-6 py-3 font-semibold">Nama Lengkap</th>
+                     <th className="px-6 py-3 font-semibold text-center">L/P</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-gray-100">
+                    {classStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                          Tidak ada siswa aktif di kelas ini.
+                        </td>
                       </tr>
-                    ))
-                  )}
-               </tbody>
-             </table>
+                    ) : (
+                      classStudents.map((s, idx) => (
+                        <tr key={s.id} className="hover:bg-indigo-50/30 transition-colors">
+                          <td className="px-6 py-3 text-center text-gray-500 font-medium">{idx + 1}</td>
+                          <td className="px-6 py-3 font-mono text-gray-600">
+                            {s.nis || s.nisn ? (
+                              <div className="flex flex-col text-xs leading-snug">
+                                <span className="font-semibold text-gray-800">{s.nis || '-'}</span>
+                                {s.nisn && <span className="text-[11px] text-gray-400 font-normal">NISN: {s.nisn}</span>}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-xs">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-3 font-semibold text-gray-800">{s.name}</td>
+                          <td className="px-6 py-3 text-gray-600 text-center font-medium">{s.gender}</td>
+                        </tr>
+                      ))
+                    )}
+                 </tbody>
+               </motion.table>
+             </AnimatePresence>
            </div>
         </div>
 

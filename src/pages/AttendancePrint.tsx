@@ -123,7 +123,7 @@ export default function AttendancePrint() {
                 {classStudents.map((s, idx) => (
                   <tr key={s.id}>
                     <td className="border border-black p-1 text-center font-medium">{idx + 1}</td>
-                    <td className="border border-black p-1 text-xs">{s.nis}{s.nisn ? ` / ${s.nisn}` : ''}</td>
+                    <td className="border border-black p-1 text-xs">{s.nis && s.nisn ? `${s.nis} / ${s.nisn}` : (s.nis || s.nisn || '-')}</td>
                     <td className="border border-black p-1 font-medium max-w-[200px] truncate">{s.name}</td>
                     <td className="border border-black p-1 text-center">{s.gender}</td>
                     {dayColumns.map(d => (

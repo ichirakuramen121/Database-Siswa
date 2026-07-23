@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Home, Users, Settings as SettingsIcon, Menu, X, LogOut, FileOutput, CalendarCheck, TrendingUp, RefreshCw, GraduationCap } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import Dashboard from './pages/Dashboard';
 import StudentsList from './pages/StudentsList';
@@ -241,13 +242,24 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 h-full">
-        {activeTab === 'dashboard' && <Dashboard />}
-        {activeTab === 'students' && <StudentsList />}
-        {activeTab === 'teachers' && <TeachersList />}
-        {activeTab === 'mutasi' && <MutasiList />}
-        {activeTab === 'attendance' && <AttendancePrint />}
-        {activeTab === 'kenaikan' && <KenaikanKelas />}
-        {activeTab === 'settings' && <Settings />}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="w-full"
+          >
+            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'students' && <StudentsList />}
+            {activeTab === 'teachers' && <TeachersList />}
+            {activeTab === 'mutasi' && <MutasiList />}
+            {activeTab === 'attendance' && <AttendancePrint />}
+            {activeTab === 'kenaikan' && <KenaikanKelas />}
+            {activeTab === 'settings' && <Settings />}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Logout Confirmation Modal */}
