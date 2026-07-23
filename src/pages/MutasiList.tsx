@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
 import { Student } from '../types';
-import { CLASSES, generateId, cn } from '../lib/utils';
+import { CLASSES, generateId, cn, getAllClasses } from '../lib/utils';
 import { 
   Search, Filter, RefreshCw, X, FileOutput, FileInput, 
   School, LogOut, LogIn, Calendar, Plus, MapPin, User, ArrowLeftRight 
@@ -265,7 +265,7 @@ export default function MutasiList() {
               onChange={(e) => setFilterClass(e.target.value)}
             >
               <option value="">Semua Kelas</option>
-              {CLASSES.map(c => <option key={c} value={c}>Kelas {c}</option>)}
+              {getAllClasses(students).map(c => <option key={c} value={c}>Kelas {c}</option>)}
             </select>
           </div>
           

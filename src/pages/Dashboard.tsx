@@ -1,6 +1,7 @@
 import { useStore } from '../store';
 import { Users, GraduationCap, UserMinus, HardDriveUpload, RefreshCw, School } from 'lucide-react';
 import { fetchFromGAS } from '../lib/api';
+import { getActiveClasses, matchStatusActive } from '../lib/utils';
 import { useState, useMemo } from 'react';
 import { 
   ResponsiveContainer, 
@@ -24,9 +25,11 @@ export default function Dashboard() {
   const countLaki = students.filter(s => s.gender === 'L').length;
   const countPerempuan = students.filter(s => s.gender === 'P').length;
   
-  const kelasAktifCount = useMemo(() => {
-    return new Set(students.filter(s => s.status === 'Aktif').map(s => s.class)).size;
+  const activeClasses = useMemo(() => {
+    return getActiveClasses(students);
   }, [students]);
+
+  const kelasAktifCount = activeClasses.length;
 
   const stats = [
     { label: 'Total Siswa', value: totalSiswa, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
@@ -36,21 +39,27 @@ export default function Dashboard() {
   ];
 
   const secondaryStats = [
-    { label: 'Siswa Aktif', value: students.filter(s => s.status === 'Aktif').length, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Siswa Lulus', value: students.filter(s => s.status === 'Lulus').length, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { label: 'Keluar / Mutasi', value: students.filter(s => s.status === 'Keluar' || s.status === 'Pindah').length, color: 'text-rose-500', bg: 'bg-rose-50' },
+    { label: 'Siswa Aktif', value: students.filter(s => matchStatusActive(s.status)).length, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Siswa Lulus', value: students.filter(s => String(s.status || '').toLowerCase() === 'lulus').length, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { label: 'Keluar / Mutasi', value: students.filter(s => {
+      const st = String(s.status || '').toLowerCase();
+      return st === 'keluar' || st === 'pindah' || st === 'mutasi';
+    }).length, color: 'text-rose-500', bg: 'bg-rose-50' },
   ];
 
   // Chart data 1: Active students by Class
   const classChartData = useMemo(() => {
     const counts: { [key: string]: number } = {};
     students.forEach(s => {
-      if (s.status === 'Aktif') {
-        counts[s.class] = (counts[s.class] || 0) + 1;
+      if (s && matchStatusActive(s.status) && s.class) {
+        const cleanClass = String(s.class).trim().toUpperCase().replace(/^KELAS\s*/i, '');
+        if (cleanClass) {
+          counts[cleanClass] = (counts[cleanClass] || 0) + 1;
+        }
       }
     });
     return Object.keys(counts)
-      .sort()
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
       .map(cls => ({
         class: `Kelas ${cls}`,
         'Jumlah Siswa': counts[cls]
@@ -59,8 +68,8 @@ export default function Dashboard() {
 
   // Chart data 2: Gender distribution of active students
   const genderChartData = useMemo(() => {
-    const L = students.filter(s => s.status === 'Aktif' && s.gender === 'L').length;
-    const P = students.filter(s => s.status === 'Aktif' && s.gender === 'P').length;
+    const L = students.filter(s => matchStatusActive(s.status) && s.gender === 'L').length;
+    const P = students.filter(s => matchStatusActive(s.status) && s.gender === 'P').length;
     return [
       { name: 'Laki-laki', value: L, color: '#3b82f6' },
       { name: 'Perempuan', value: P, color: '#ec4899' }

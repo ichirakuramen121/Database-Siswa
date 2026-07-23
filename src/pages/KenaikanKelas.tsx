@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../store';
-import { CLASSES, cn, matchClass, matchStatusActive } from '../lib/utils';
+import { CLASSES, cn, matchClass, matchStatusActive, getActiveClasses, getAllClasses } from '../lib/utils';
 import { Student } from '../types';
 import { Users, ArrowUpCircle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { fetchFromGAS } from '../lib/api';
@@ -11,7 +11,17 @@ export default function KenaikanKelas() {
     students, updateStudentsBulk, settings, setLoading, 
     setIsSyncingGlobal, setLastSyncedAt 
   } = useStore();
-  const [selectedClass, setSelectedClass] = useState<string>(CLASSES[0]);
+  
+  const activeClasses = useMemo(() => getActiveClasses(students), [students]);
+  const allClasses = useMemo(() => getAllClasses(students), [students]);
+
+  const [selectedClass, setSelectedClass] = useState<string>('');
+
+  useEffect(() => {
+    if (activeClasses.length > 0 && (!selectedClass || !activeClasses.includes(selectedClass))) {
+      setSelectedClass(activeClasses[0]);
+    }
+  }, [activeClasses, selectedClass]);
   
   // Only active students in the selected class
   const classStudents = useMemo(() => {
@@ -104,7 +114,7 @@ export default function KenaikanKelas() {
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
             >
-              {CLASSES.map(c => <option key={c} value={c}>Kelas {c}</option>)}
+              {allClasses.map(c => <option key={c} value={c}>Kelas {c}</option>)}
             </select>
           </div>
 

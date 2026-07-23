@@ -250,6 +250,97 @@ export function parseCSVToTeachers(text: string): Partial<Teacher>[] {
   return result;
 }
 
+export const downloadStudentExcelTemplate = (filename: string = 'Template_Import_Siswa.xlsx') => {
+  const exampleData = [
+    {
+      "NIS": "252601001",
+      "NISN": "1234567890",
+      "Nama Lengkap": "Ahmad Fauzi",
+      "Kelas": "1A",
+      "L/P": "L",
+      "Tgl Lahir": "2015-05-12",
+      "Alamat": "Jl. Merdeka No. 10",
+      "Nama Orang Tua": "Slamet",
+      "Status": "Aktif",
+      "No Ijazah": "-"
+    },
+    {
+      "NIS": "252601002",
+      "NISN": "0987654321",
+      "Nama Lengkap": "Siti Aminah",
+      "Kelas": "1A",
+      "L/P": "P",
+      "Tgl Lahir": "2015-08-22",
+      "Alamat": "Jl. Kenanga No. 4",
+      "Nama Orang Tua": "Budi",
+      "Status": "Aktif",
+      "No Ijazah": "-"
+    }
+  ];
+
+  const ws = XLSX.utils.json_to_sheet(exampleData, {
+    header: ["NIS", "NISN", "Nama Lengkap", "Kelas", "L/P", "Tgl Lahir", "Alamat", "Nama Orang Tua", "Status", "No Ijazah"]
+  });
+
+  ws['!cols'] = [
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 25 },
+    { wch: 10 },
+    { wch: 8 },
+    { wch: 14 },
+    { wch: 30 },
+    { wch: 22 },
+    { wch: 12 },
+    { wch: 18 }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Template Siswa");
+  XLSX.writeFile(wb, filename);
+};
+
+export const downloadTeacherExcelTemplate = (filename: string = 'Template_Import_Guru.xlsx') => {
+  const exampleData = [
+    {
+      "NIP": "198501012010011001",
+      "Nama Lengkap": "Budi Santoso, S.Pd",
+      "L/P": "L",
+      "Wali Kelas": "1A",
+      "No Telepon": "081234567890",
+      "Email": "budi@sekolah.sch.id",
+      "Status": "Aktif"
+    },
+    {
+      "NIP": "199002022015022002",
+      "Nama Lengkap": "Dewi Lestari, M.Pd",
+      "L/P": "P",
+      "Wali Kelas": "2B",
+      "No Telepon": "085678901234",
+      "Email": "dewi@sekolah.sch.id",
+      "Status": "Aktif"
+    }
+  ];
+
+  const ws = XLSX.utils.json_to_sheet(exampleData, {
+    header: ["NIP", "Nama Lengkap", "L/P", "Wali Kelas", "No Telepon", "Email", "Status"]
+  });
+
+  ws['!cols'] = [
+    { wch: 20 },
+    { wch: 28 },
+    { wch: 8 },
+    { wch: 12 },
+    { wch: 16 },
+    { wch: 25 },
+    { wch: 12 }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Template Guru");
+  XLSX.writeFile(wb, filename);
+};
+
 export const exportToExcel = (students: Student[], filename: string = 'data-siswa.xlsx') => {
   const ws = XLSX.utils.json_to_sheet(students.map(s => ({
     "ID": s.id,

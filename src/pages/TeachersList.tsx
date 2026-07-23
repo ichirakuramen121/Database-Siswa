@@ -6,12 +6,12 @@ import {
   GraduationCap, Phone, Mail, CheckCircle2, XCircle, Users,
   DownloadCloud, UploadCloud, FileSpreadsheet, RefreshCw, UserCheck, PlusCircle
 } from 'lucide-react';
-import { generateId, cn } from '../lib/utils';
+import { generateId, cn, getAllClasses } from '../lib/utils';
 import { fetchFromGAS } from '../lib/api';
-import { exportTeachersToExcel, parseCSVToTeachers, importTeachersFromExcel } from '../lib/excel';
+import { exportTeachersToExcel, parseCSVToTeachers, importTeachersFromExcel, downloadTeacherExcelTemplate } from '../lib/excel';
 
 export default function TeachersList() {
-  const { teachers, settings, addTeacher, updateTeacher, deleteTeacher, setLoading, setIsSyncingGlobal } = useStore();
+  const { teachers, students, settings, addTeacher, updateTeacher, deleteTeacher, setLoading, setIsSyncingGlobal } = useStore();
   
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -272,16 +272,10 @@ export default function TeachersList() {
     }
   };
 
-  // List of available classes (1A-6C + None)
+  // List of available classes derived from real-time student data
   const classesList = useMemo(() => {
-    const list = [];
-    for (let g = 1; g <= 6; g++) {
-      for (const c of ['A', 'B', 'C']) {
-        list.push(`${g}${c}`);
-      }
-    }
-    return list;
-  }, []);
+    return getAllClasses(students);
+  }, [students]);
 
   // Filter & Search logic
   const filteredTeachers = useMemo(() => {
@@ -342,6 +336,12 @@ export default function TeachersList() {
             ref={csvInputRef}
             onChange={handleCSVImport}
           />
+          <button 
+            onClick={() => downloadTeacherExcelTemplate()} 
+            className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100/70 font-semibold text-sm shadow-sm transition active:scale-95 duration-150"
+          >
+            <FileSpreadsheet size={16} /> Template Excel (.xlsx)
+          </button>
           <button 
             onClick={downloadCSVTemplate} 
             className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 font-medium text-sm transition active:scale-95 duration-150"

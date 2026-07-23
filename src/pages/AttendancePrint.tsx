@@ -1,11 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../store';
-import { CLASSES, matchClass, matchStatusActive } from '../lib/utils';
+import { CLASSES, matchClass, matchStatusActive, getActiveClasses, getAllClasses } from '../lib/utils';
 import { Printer, Filter, Calendar as CalendarIcon, FileSpreadsheet } from 'lucide-react';
 
 export default function AttendancePrint() {
   const { students } = useStore();
-  const [selectedClass, setSelectedClass] = useState<string>(CLASSES[0]);
+  const activeClasses = useMemo(() => getActiveClasses(students), [students]);
+  const allClasses = useMemo(() => getAllClasses(students), [students]);
+
+  const [selectedClass, setSelectedClass] = useState<string>('');
+  
+  useEffect(() => {
+    if (activeClasses.length > 0 && (!selectedClass || !activeClasses.includes(selectedClass))) {
+      setSelectedClass(activeClasses[0]);
+    }
+  }, [activeClasses, selectedClass]);
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
@@ -54,7 +63,7 @@ export default function AttendancePrint() {
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
             >
-              {CLASSES.map(c => <option key={c} value={c}>Kelas {c}</option>)}
+              {allClasses.map(c => <option key={c} value={c}>Kelas {c}</option>)}
             </select>
           </div>
           

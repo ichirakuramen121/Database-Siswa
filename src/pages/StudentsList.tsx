@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { Student } from '../types';
-import { CLASSES, STATUSES, generateId, cn, formatDate, formatAge, getGoogleDriveDirectImageUrl, standardizeDate, matchClass } from '../lib/utils';
+import { CLASSES, STATUSES, generateId, cn, formatDate, formatAge, getGoogleDriveDirectImageUrl, standardizeDate, matchClass, getActiveClasses, getAllClasses } from '../lib/utils';
 import { 
   Search, Plus, Filter, Download, Upload, Edit, Trash2, Printer, X, FileDown,
   ArrowUpDown, FileSpreadsheet, Eye, BookOpen, User, Calendar, MapPin, UserCheck, DownloadCloud, UploadCloud,
   ChevronLeft, ChevronRight, RefreshCw, PlusCircle
 } from 'lucide-react';
-import { exportToExcel, importFromExcel, parseCSVToStudents } from '../lib/excel';
+import { exportToExcel, importFromExcel, parseCSVToStudents, downloadStudentExcelTemplate } from '../lib/excel';
 import { uploadFileToGAS, fetchFromGAS } from '../lib/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -417,10 +417,13 @@ export default function StudentsList() {
             ref={csvInputRef}
             onChange={handleCSVImport}
           />
-          <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl shadow-lg shadow-green-200/50 hover:bg-green-700 font-medium text-sm">
+          <button onClick={() => downloadStudentExcelTemplate()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100/70 font-semibold text-sm shadow-sm transition active:scale-95 duration-150">
+            <FileSpreadsheet size={16} /> Template Excel (.xlsx)
+          </button>
+          <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl shadow-lg shadow-green-200/50 hover:bg-green-700 font-medium text-sm transition active:scale-95 duration-150">
             <Upload size={16} /> Import Excel
           </button>
-          <button onClick={downloadCSVTemplate} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 font-medium text-sm">
+          <button onClick={downloadCSVTemplate} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 font-medium text-sm transition active:scale-95 duration-150">
             <DownloadCloud size={16} /> Template CSV
           </button>
           <button onClick={() => csvInputRef.current?.click()} className="flex items-center justify-center w-full sm:w-auto gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-sm">
@@ -459,8 +462,8 @@ export default function StudentsList() {
             value={filterClass}
             onChange={(e) => setFilterClass(e.target.value)}
           >
-            <option value="">Semua Kelas</option>
-            {CLASSES.map(c => <option key={c} value={c}>Kelas {c}</option>)}
+            <option value="">Semua Kelas ({getActiveClasses(students).length} Aktif)</option>
+            {getAllClasses(students).map(c => <option key={c} value={c}>Kelas {c}</option>)}
           </select>
         </div>
         <div className="relative w-full sm:w-56">
