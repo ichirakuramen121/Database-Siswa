@@ -143,7 +143,11 @@ export default function AttendancePrint() {
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
             >
-              {allClasses.map(c => <option key={c} value={c}>Kelas {c}</option>)}
+              {allClasses.length === 0 ? (
+                <option value="">Belum Ada Data Kelas</option>
+              ) : (
+                allClasses.map(c => <option key={c} value={c}>Kelas {c}</option>)
+              )}
             </select>
           </div>
 

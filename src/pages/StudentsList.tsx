@@ -279,7 +279,8 @@ export default function StudentsList() {
   };
 
   const handleOpenModal = (student?: Student) => {
-    setCurrentStudent(student ? { ...student } : { gender: 'L', status: 'Aktif', class: '1A' });
+    const defaultClass = getAllClasses(students)[0] || '1A';
+    setCurrentStudent(student ? { ...student } : { gender: 'L', status: 'Aktif', class: defaultClass });
     setIsModalOpen(true);
   };
 
@@ -836,8 +837,10 @@ export default function StudentsList() {
                     </div>
                     <div>
                       <label className="label">Kelas</label>
-                      <select className="input" value={currentStudent.class || '1A'} onChange={e => setCurrentStudent({...currentStudent, class: e.target.value})}>
-                        {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                      <select className="input" value={currentStudent.class || (getAllClasses(students)[0] || '1A')} onChange={e => setCurrentStudent({...currentStudent, class: e.target.value})}>
+                        {Array.from(new Set([...getAllClasses(students), ...CLASSES, ...(currentStudent.class ? [currentStudent.class] : [])])).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).map(c => (
+                          <option key={c} value={c}>Kelas {c}</option>
+                        ))}
                       </select>
                     </div>
                     <div>

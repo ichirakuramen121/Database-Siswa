@@ -245,7 +245,7 @@ export function matchStatusActive(status: string | null | undefined): boolean {
 }
 
 export function getActiveClasses(students: any[]): string[] {
-  if (!students || !Array.isArray(students) || students.length === 0) return CLASSES;
+  if (!students || !Array.isArray(students) || students.length === 0) return [];
   const set = new Set<string>();
   students.forEach(s => {
     if (s && matchStatusActive(s.status) && s.class) {
@@ -253,12 +253,11 @@ export function getActiveClasses(students: any[]): string[] {
       if (clean) set.add(clean);
     }
   });
-  if (set.size === 0) return CLASSES;
   return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
 export function getAllClasses(students: any[]): string[] {
-  if (!students || !Array.isArray(students) || students.length === 0) return CLASSES;
+  if (!students || !Array.isArray(students) || students.length === 0) return [];
   const set = new Set<string>();
   students.forEach(s => {
     if (s && s.class) {
@@ -266,7 +265,6 @@ export function getAllClasses(students: any[]): string[] {
       if (clean) set.add(clean);
     }
   });
-  CLASSES.forEach(c => set.add(c));
   return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 }
 

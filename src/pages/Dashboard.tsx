@@ -149,7 +149,7 @@ export default function Dashboard() {
         )}
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-indigo-900">Dashboard</h2>
-          <p className="text-gray-500 mt-1 font-medium">Ringkasan data siswa SD Kelas 1-6.</p>
+          <p className="text-gray-500 mt-1 font-medium">Ringkasan data siswa dan statistik kelas aktif.</p>
         </div>
       </div>
 
@@ -192,7 +192,7 @@ export default function Dashboard() {
         {/* Bar Chart Class Distribution */}
         <div className="lg:col-span-2 bg-white/70 backdrop-blur-2xl p-5 sm:p-6 rounded-3xl border border-white/90 shadow-sm">
           <h3 className="text-lg font-bold text-indigo-900 mb-1">Distribusi Kelas</h3>
-          <p className="text-xs text-gray-400 mb-4 font-medium">Jumlah siswa aktif di setiap jenjang kelas (1A - 6C)</p>
+          <p className="text-xs text-gray-400 mb-4 font-medium">Jumlah siswa aktif di setiap kelas terdaftar</p>
           {classChartData.length === 0 ? (
             <div className="h-64 flex items-center justify-center text-gray-400 font-medium">
               Tidak ada data kelas aktif.
