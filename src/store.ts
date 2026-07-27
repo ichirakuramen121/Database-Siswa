@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AppState, Student, Teacher, Settings } from './types';
+import { normalizeClassName } from './lib/utils';
+
+const cleanStudentClass = (student: Student): Student => ({
+  ...student,
+  class: student.class ? (normalizeClassName(student.class) || '1A') : '1A',
+});
 
 export const useStore = create<AppState>()(
   persist(
@@ -15,18 +21,18 @@ export const useStore = create<AppState>()(
       isSyncingGlobal: false,
       login: () => set({ isAuthenticated: true }),
       logout: () => set({ isAuthenticated: false, students: [], teachers: [] }),
-      setStudents: (students) => set({ students, error: null }),
-      addStudent: (student) => set((state) => ({ students: [...state.students, student] })),
+      setStudents: (students) => set({ students: students.map(cleanStudentClass), error: null }),
+      addStudent: (student) => set((state) => ({ students: [...state.students, cleanStudentClass(student)] })),
       updateStudent: (id, data) =>
         set((state) => ({
-          students: state.students.map((s) => (s.id === id ? { ...s, ...data } : s)),
+          students: state.students.map((s) => (s.id === id ? cleanStudentClass({ ...s, ...data }) : s)),
         })),
       updateStudentsBulk: (updates) =>
         set((state) => {
           const updateMap = new Map(updates.map((u) => [u.id, u.data]));
           return {
             students: state.students.map((s) =>
-              updateMap.has(s.id) ? { ...s, ...updateMap.get(s.id) } : s
+              updateMap.has(s.id) ? cleanStudentClass({ ...s, ...updateMap.get(s.id) }) : s
             ),
           };
         }),
@@ -52,6 +58,14 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'sis-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.students) && state.students.length > 0) {
+          const hasUncleaned = state.students.some(s => s.class && s.class !== normalizeClassName(s.class));
+          if (hasUncleaned) {
+            state.students = state.students.map(cleanStudentClass);
+          }
+        }
+      },
     }
   )
 );

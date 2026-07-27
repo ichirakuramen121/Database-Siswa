@@ -222,20 +222,21 @@ export function getGoogleDriveThumbnailUrl(url: string | null | undefined): stri
   return cleanUrl;
 }
 
+export function normalizeClassName(className: string | null | undefined): string {
+  if (!className) return '';
+  const str = String(className).trim();
+  if (str.toUpperCase() === 'NONE') return 'None';
+  return str
+    .toUpperCase()
+    .replace(/\bKELAS\b/gi, '')
+    .replace(/[-_]/g, '')
+    .replace(/\s+/g, '')
+    .trim();
+}
+
 export function matchClass(studentClass: string | null | undefined, targetClass: string | null | undefined): boolean {
   if (!studentClass || !targetClass) return false;
-  
-  // Clean target: e.g. "1A" -> "1A"
-  const cleanTarget = String(targetClass).replace(/\s+/g, '').toUpperCase();
-  
-  // Clean student class: e.g. "Kelas 1A" -> "1A", "Kelas 1-A" -> "1A", "1-A" -> "1A"
-  const cleanStudent = String(studentClass)
-    .toUpperCase()
-    .replace(/KELAS/g, '')
-    .replace(/[-_]/g, '')
-    .replace(/\s+/g, '');
-    
-  return cleanStudent === cleanTarget;
+  return normalizeClassName(studentClass) === normalizeClassName(targetClass);
 }
 
 export function matchStatusActive(status: string | null | undefined): boolean {
@@ -249,7 +250,7 @@ export function getActiveClasses(students: any[]): string[] {
   const set = new Set<string>();
   students.forEach(s => {
     if (s && matchStatusActive(s.status) && s.class) {
-      const clean = String(s.class).trim().toUpperCase().replace(/^KELAS\s*/i, '');
+      const clean = normalizeClassName(s.class);
       if (clean) set.add(clean);
     }
   });
@@ -261,7 +262,7 @@ export function getAllClasses(students: any[]): string[] {
   const set = new Set<string>();
   students.forEach(s => {
     if (s && s.class) {
-      const clean = String(s.class).trim().toUpperCase().replace(/^KELAS\s*/i, '');
+      const clean = normalizeClassName(s.class);
       if (clean) set.add(clean);
     }
   });

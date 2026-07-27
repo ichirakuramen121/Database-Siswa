@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { Student, Teacher } from '../types';
-import { standardizeDate } from './utils';
+import { standardizeDate, normalizeClassName } from './utils';
 
 export function detectDelimiter(text: string): string {
   const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0).slice(0, 10);
@@ -142,7 +142,7 @@ export function parseCSVToStudents(text: string): Partial<Student>[] {
       statusRaw = cells[9] || 'Aktif';
     }
 
-    sClass = sClass.toUpperCase().replace(/KELAS/g, '').replace(/[-_]/g, '').trim() || '1A';
+    sClass = normalizeClassName(sClass) || '1A';
 
     let parsedStatus: 'Aktif' | 'Lulus' | 'Pindah' | 'Keluar' = 'Aktif';
     if (statusRaw.toLowerCase().includes('lulus')) parsedStatus = 'Lulus';
@@ -553,7 +553,7 @@ export const importFromExcel = (file: File): Promise<Partial<Student>[]> => {
           const parentKey = Object.keys(row).find(k => k.toLowerCase().includes('orang tua') || k.toLowerCase().includes('ortu') || k.toLowerCase().includes('parent'));
 
           let sClass = String((classKey ? row[classKey] : row['Kelas']) || '1A');
-          sClass = sClass.toUpperCase().replace(/KELAS/g, '').replace(/[-_]/g, '').trim() || '1A';
+          sClass = normalizeClassName(sClass) || '1A';
 
           return {
             nis: String((nisKey ? row[nisKey] : row['NIS']) || row['Nis'] || ''),
