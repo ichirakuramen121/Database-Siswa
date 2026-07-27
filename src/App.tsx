@@ -290,7 +290,38 @@ function App() {
           })}
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-white/20">
+        <div className="mt-auto pt-4 border-t border-white/20 space-y-3">
+          {/* Status Sinkronisasi - Berada di atas tombol logout */}
+          {(isSyncingGlobal || lastSyncedAt) && (
+            <div className={cn(
+              "p-3 rounded-2xl shadow-xs border backdrop-blur-md flex items-center gap-2.5 transition-all duration-300",
+              isSyncingGlobal 
+                ? "bg-indigo-600/90 text-white border-indigo-500/50" 
+                : "bg-white/80 text-gray-800 border-white/80 shadow-indigo-100/50"
+            )}>
+              <div className="flex items-center justify-center">
+                {isSyncingGlobal ? (
+                  <RefreshCw size={16} className="animate-spin text-indigo-600" />
+                ) : (
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold leading-tight truncate">
+                  {isSyncingGlobal ? "Mensinkronkan..." : "Tersinkronisasi"}
+                </p>
+                {lastSyncedAt && (
+                  <p className={cn(
+                    "text-[10px] mt-0.5 font-medium leading-none truncate",
+                    isSyncingGlobal ? "text-indigo-200" : "text-gray-400"
+                  )}>
+                    Terakhir diperbarui: {lastSyncedAt}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           <button 
             onClick={handleLogout}
             className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left font-medium text-rose-600 hover:bg-rose-50 border border-transparent active:scale-95 duration-150"
@@ -355,38 +386,6 @@ function App() {
         </div>
       )}
 
-      {/* Toast / Status Bar Sinkronisasi (Ditaruh Di Atas) */}
-      <div className="fixed top-4 right-4 sm:top-5 sm:right-6 z-[9999] flex flex-col gap-2 no-print max-w-sm">
-        {(isSyncingGlobal || lastSyncedAt) && (
-          <div className={cn(
-            "p-3 sm:p-4 rounded-2xl shadow-xl border backdrop-blur-md flex items-center gap-3 transition-all duration-300 transform translate-y-0",
-            isSyncingGlobal 
-              ? "bg-indigo-600/90 text-white border-indigo-500/50" 
-              : "bg-white/90 text-gray-800 border-gray-100 shadow-indigo-100"
-          )}>
-            <div className="flex items-center justify-center">
-              {isSyncingGlobal ? (
-                <RefreshCw size={18} className="animate-spin text-white" />
-              ) : (
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-              )}
-            </div>
-            <div className="flex-1 min-w-[150px]">
-              <p className="text-xs font-bold leading-none">
-                {isSyncingGlobal ? "Sinkronisasi Google Sheets..." : "Tersinkronisasi"}
-              </p>
-              {lastSyncedAt && (
-                <p className={cn(
-                  "text-[10px] mt-1 font-medium leading-none",
-                  isSyncingGlobal ? "text-indigo-200" : "text-gray-400"
-                )}>
-                  Terakhir diperbarui: {lastSyncedAt}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

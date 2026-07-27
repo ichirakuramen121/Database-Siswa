@@ -49,6 +49,7 @@ export default function MutasiList() {
 
   // Form states for Mutasi Keluar
   const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [keluarStatus, setKeluarStatus] = useState<'Pindah' | 'Keluar'>('Pindah');
   const [sekolahTujuan, setSekolahTujuan] = useState('');
   const [tanggalKeluar, setTanggalKeluar] = useState(new Date().toISOString().slice(0, 10));
@@ -68,6 +69,22 @@ export default function MutasiList() {
 
   // Get active students for Mutasi Keluar selection
   const activeStudents = useMemo(() => students.filter(s => s.status === 'Aktif'), [students]);
+
+  // Filter active students by search query
+  const filteredActiveStudents = useMemo(() => {
+    if (!studentSearchQuery.trim()) return activeStudents;
+    const q = studentSearchQuery.toLowerCase().trim();
+    return activeStudents.filter(s => 
+      s.name.toLowerCase().includes(q) ||
+      s.nis.toLowerCase().includes(q) ||
+      (s.nisn && s.nisn.toLowerCase().includes(q)) ||
+      s.class.toLowerCase().includes(q)
+    );
+  }, [activeStudents, studentSearchQuery]);
+
+  const selectedStudentObject = useMemo(() => {
+    return activeStudents.find(s => s.id === selectedStudentId);
+  }, [activeStudents, selectedStudentId]);
 
   // Sync with Sheets
   const triggerSync = async (updatedStudents: Student[]) => {
@@ -120,6 +137,7 @@ export default function MutasiList() {
 
   const handleOpenKeluarModal = () => {
     setSelectedStudentId('');
+    setStudentSearchQuery('');
     setKeluarStatus('Pindah');
     setSekolahTujuan('');
     setTanggalKeluar(new Date().toISOString().slice(0, 10));
@@ -594,24 +612,94 @@ export default function MutasiList() {
              </div>
              <form onSubmit={handleSaveKeluarMutasi} className="p-5 sm:p-6 space-y-4">
                 <div>
-                  <label className="label">Pilih Siswa Aktif</label>
-                  <select 
-                    className="input" 
-                    required 
-                    value={selectedStudentId} 
-                    onChange={e => {
-                      setSelectedStudentId(e.target.value);
-                      const s = students.find(x => x.id === e.target.value);
-                      if (s?.sekolahTujuan) setSekolahTujuan(s.sekolahTujuan);
-                    }}
-                  >
-                    <option value="" disabled>-- Pilih Siswa --</option>
-                    {activeStudents.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {s.nis} - {s.name} (Kelas {s.class})
-                      </option>
-                    ))}
-                  </select>
+                  {selectedStudentObject ? (
+                    <div className="space-y-1.5">
+                      <label className="label text-indigo-900 font-bold">Siswa Terpilih <span className="text-rose-500">*</span></label>
+                      <div className="bg-indigo-50/90 border border-indigo-200 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-xs">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-extrabold text-sm shrink-0 shadow-xs">
+                            {selectedStudentObject.class}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-indigo-950 text-sm truncate">{selectedStudentObject.name}</h4>
+                            <p className="text-xs text-indigo-600 font-mono truncate">
+                              NIS: {selectedStudentObject.nis} {selectedStudentObject.nisn ? `| NISN: ${selectedStudentObject.nisn}` : ''} ({selectedStudentObject.gender === 'L' ? 'L' : 'P'})
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedStudentId('');
+                            setStudentSearchQuery('');
+                          }}
+                          className="px-3 py-1.5 bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-100 rounded-xl text-xs font-bold transition shrink-0 active:scale-95"
+                        >
+                          Ganti Siswa
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="label">Cari & Pilih Siswa Aktif <span className="text-rose-500">*</span></label>
+                      <div className="relative">
+                        <Search className="absolute left-3.5 top-3 text-indigo-500 w-4 h-4" />
+                        <input 
+                          type="text" 
+                          placeholder="Ketik nama, NIS, NISN, atau kelas..." 
+                          className="input pl-10 text-sm font-medium w-full border-indigo-200 focus:border-indigo-500"
+                          value={studentSearchQuery}
+                          onChange={(e) => setStudentSearchQuery(e.target.value)}
+                          autoFocus
+                        />
+                        {studentSearchQuery && (
+                          <button 
+                            type="button" 
+                            onClick={() => setStudentSearchQuery('')}
+                            className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 p-1"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* List of active students matching search */}
+                      <div className="max-h-52 overflow-y-auto border border-indigo-100 rounded-2xl divide-y divide-indigo-50 bg-white shadow-inner">
+                        {filteredActiveStudents.length === 0 ? (
+                          <div className="p-4 text-center text-gray-400 text-xs font-medium">
+                            Tidak ditemukan siswa dengan kata kunci "{studentSearchQuery}".
+                          </div>
+                        ) : (
+                          filteredActiveStudents.slice(0, 30).map(s => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedStudentId(s.id);
+                                if (s.sekolahTujuan) setSekolahTujuan(s.sekolahTujuan);
+                              }}
+                              className="w-full text-left p-3 hover:bg-indigo-50 transition-colors flex items-center justify-between gap-2 group"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-gray-900 group-hover:text-indigo-700 truncate">{s.name}</p>
+                                <p className="text-xs text-gray-500 font-mono truncate">
+                                  NIS: {s.nis} • Kelas {s.class} • {s.gender === 'L' ? 'Laki-laki' : 'Perempuan'}
+                                </p>
+                              </div>
+                              <span className="text-xs font-bold px-3 py-1 bg-indigo-50 group-hover:bg-indigo-600 group-hover:text-white text-indigo-700 rounded-xl transition-all shrink-0">
+                                Pilih
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                      {filteredActiveStudents.length > 30 && (
+                        <p className="text-[11px] text-gray-400 text-center font-medium">
+                          Menampilkan 30 dari {filteredActiveStudents.length} siswa aktif. Ketik nama untuk mempersempit pencarian.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div>
