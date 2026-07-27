@@ -46,7 +46,13 @@ export default function AttendancePrint() {
   ];
   const [selectedSubject, setSelectedSubject] = useState<string>(subjects[0]);
   const [selectedSemester, setSelectedSemester] = useState<'Ganjil' | 'Genap'>('Ganjil');
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('2025/2026');
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(settings.tahunPelajaran || '2025/2026');
+
+  useEffect(() => {
+    if (settings.tahunPelajaran) {
+      setSelectedAcademicYear(settings.tahunPelajaran);
+    }
+  }, [settings.tahunPelajaran]);
 
   // Administrasi Sub-tab
   const [adminSection, setAdminSection] = useState<'cover' | 'rekap' | 'jurnal'>('cover');

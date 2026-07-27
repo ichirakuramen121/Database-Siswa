@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
-import { Save, Copy, Check, Smartphone, Database, AlertCircle, Upload, Trash2, Image } from 'lucide-react';
+import { Save, Copy, Check, Smartphone, Database, AlertCircle, Upload, Trash2, Image, Calendar } from 'lucide-react';
 import { GAS_TEMPLATE } from '../lib/constants';
 import { fetchFromGAS } from '../lib/api';
 import QRCode from "react-qr-code";
@@ -9,6 +9,8 @@ export default function Settings() {
   const { settings, setSettings } = useStore();
   const [url, setUrl] = useState(settings.scriptUrl);
   const [appName, setAppName] = useState(settings.appName || 'EduConnect');
+  const [schoolName, setSchoolName] = useState(settings.schoolName || '');
+  const [tahunPelajaran, setTahunPelajaran] = useState(settings.tahunPelajaran || '2025/2026');
   const [folderId, setFolderId] = useState(settings.folderId || '');
   const [adminUser, setAdminUser] = useState(settings.adminUsername || 'admin');
   const [adminPass, setAdminPass] = useState(settings.adminPassword || 'admin');
@@ -20,13 +22,20 @@ export default function Settings() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const shareConfigUrl = settings.scriptUrl ? `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(btoa(JSON.stringify({ scriptUrl: settings.scriptUrl, folderId: settings.folderId, appName: settings.appName, adminUsername: settings.adminUsername, adminPassword: settings.adminPassword })))}` : '';
+  useEffect(() => {
+    if (settings.tahunPelajaran) setTahunPelajaran(settings.tahunPelajaran);
+    if (settings.schoolName) setSchoolName(settings.schoolName);
+  }, [settings.tahunPelajaran, settings.schoolName]);
+
+  const shareConfigUrl = settings.scriptUrl ? `${window.location.origin}${window.location.pathname}?config=${encodeURIComponent(btoa(JSON.stringify({ scriptUrl: settings.scriptUrl, folderId: settings.folderId, appName: settings.appName, adminUsername: settings.adminUsername, adminPassword: settings.adminPassword, tahunPelajaran: settings.tahunPelajaran, schoolName: settings.schoolName })))}` : '';
 
   const handleSave = () => {
     const updatedSettings = { 
       ...settings, 
       scriptUrl: url, 
       appName, 
+      schoolName,
+      tahunPelajaran,
       folderId, 
       adminUsername: adminUser, 
       adminPassword: adminPass,
@@ -118,15 +127,68 @@ export default function Settings() {
       <div className="bg-white/70 backdrop-blur-2xl p-5 sm:p-8 rounded-3xl sm:rounded-[2rem] border border-white/90 shadow-lg">
         <h3 className="text-xl font-bold mb-6 text-indigo-900">Konfigurasi Umum</h3>
         <div className="space-y-4 mb-8">
-          <div>
-            <label className="label">Nama Aplikasi</label>
-            <input 
-              type="text" 
-              className="input w-full text-sm sm:text-base" 
-              placeholder="Contoh: EduConnect"
-              value={appName}
-              onChange={(e) => setAppName(e.target.value)}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Nama Aplikasi</label>
+              <input 
+                type="text" 
+                className="input w-full text-sm sm:text-base font-semibold" 
+                placeholder="Contoh: EduConnect"
+                value={appName}
+                onChange={(e) => setAppName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Nama Sekolah / Instansi</label>
+              <input 
+                type="text" 
+                className="input w-full text-sm sm:text-base font-semibold" 
+                placeholder="Contoh: SD Negeri 1 Sukanagara"
+                value={schoolName}
+                onChange={(e) => setSchoolName(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Tahun Pelajaran (Ajaran) */}
+          <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <label className="label text-indigo-900 font-bold flex items-center gap-2 mb-0">
+                <Calendar size={18} className="text-indigo-600" />
+                Tahun Pelajaran (Ajaran)
+              </label>
+              <span className="text-[11px] font-bold text-indigo-600 bg-indigo-100 px-2.5 py-0.5 rounded-full">
+                Aktif: {tahunPelajaran || '2025/2026'}
+              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 items-center">
+              <input 
+                type="text" 
+                className="input w-full sm:w-1/2 text-sm sm:text-base font-extrabold text-indigo-950 bg-white" 
+                placeholder="Contoh: 2025/2026"
+                value={tahunPelajaran}
+                onChange={(e) => setTahunPelajaran(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
+                {['2024/2025', '2025/2026', '2026/2027', '2027/2028'].map((year) => (
+                  <button
+                    key={year}
+                    type="button"
+                    onClick={() => setTahunPelajaran(year)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
+                      tahunPelajaran === year
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-white text-indigo-800 hover:bg-indigo-100 border border-indigo-200'
+                    }`}
+                  >
+                    {year}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-indigo-700/80">
+              Tahun pelajaran ini akan digunakan secara otomatis pada cetak daftar hadir, legger nilai, dokumen administrasi, serta rekapitulasi data.
+            </p>
           </div>
           <div>
             <label className="label">Logo Sekolah</label>

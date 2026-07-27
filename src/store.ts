@@ -8,7 +8,7 @@ export const useStore = create<AppState>()(
       isAuthenticated: false,
       students: [],
       teachers: [],
-      settings: { scriptUrl: '', appName: 'EduConnect', folderId: '' },
+      settings: { scriptUrl: '', appName: 'EduConnect', folderId: '', tahunPelajaran: '2025/2026', schoolName: '' },
       isLoading: false,
       error: null,
       lastSyncedAt: null,

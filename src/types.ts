@@ -43,6 +43,8 @@ export interface Settings {
   adminUsername?: string;
   adminPassword?: string;
   schoolLogoUrl?: string;
+  tahunPelajaran?: string;
+  schoolName?: string;
 }
 
 export interface AppState {

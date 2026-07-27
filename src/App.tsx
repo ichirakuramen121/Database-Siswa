@@ -255,7 +255,12 @@ function App() {
                 <Users className="w-6 h-6 text-white" />
               )}
             </div>
-            <span className="font-extrabold text-xl tracking-tight text-indigo-950 truncate">{appName}</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-extrabold text-xl tracking-tight text-indigo-950 truncate">{appName}</span>
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100/80 px-2 py-0.5 rounded-md border border-indigo-200/50 self-start mt-0.5 font-mono">
+                TP {settings.tahunPelajaran || '2025/2026'}
+              </span>
+            </div>
           </div>
           <button 
             onClick={() => setIsSidebarCollapsed(true)} 
