@@ -174,7 +174,7 @@ function App() {
     return <Login />;
   }
 
-  const appName = settings.appName || 'EduConnect';
+  const displayName = settings.schoolName || settings.appName || 'SDN Citapen';
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -222,7 +222,7 @@ function App() {
           {settings.schoolLogoUrl && (
             <img src={settings.schoolLogoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-cover bg-white" referrerPolicy="no-referrer" />
           )}
-          <h1 className="font-bold text-base tracking-tight truncate">{appName}</h1>
+          <h1 className="font-bold text-base tracking-tight truncate">{displayName}</h1>
         </div>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition active:scale-95">
           {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -256,7 +256,7 @@ function App() {
               )}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="font-extrabold text-xl tracking-tight text-indigo-950 truncate">{appName}</span>
+              <span className="font-extrabold text-xl tracking-tight text-indigo-950 truncate">{displayName}</span>
               <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100/80 px-2 py-0.5 rounded-md border border-indigo-200/50 self-start mt-0.5 font-mono">
                 TP {settings.tahunPelajaran || '2025/2026'}
               </span>

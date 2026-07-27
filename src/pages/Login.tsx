@@ -11,8 +11,10 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const appName = settings?.appName || 'EduConnect';
   const schoolName = settings?.schoolName || 'SDN Citapen';
+  const subtitle = (settings?.appName && settings.appName.trim().toLowerCase() !== schoolName.trim().toLowerCase()) 
+    ? settings.appName 
+    : 'Sistem Informasi Siswa';
   const tahunPelajaran = settings?.tahunPelajaran || '2025/2026';
 
   const handleLogin = (e: React.FormEvent) => {
@@ -108,9 +110,9 @@ export default function Login() {
                 )}
               </div>
               <div className="min-w-0">
-                <span className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight block truncate">{appName}</span>
+                <span className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight block truncate">{schoolName}</span>
                 <span className="text-[11px] font-bold text-indigo-600 tracking-wide block uppercase truncate">
-                  {schoolName}
+                  {subtitle}
                 </span>
               </div>
             </div>

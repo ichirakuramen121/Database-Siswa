@@ -9,7 +9,7 @@ export default function Settings() {
   const { settings, setSettings } = useStore();
   const [url, setUrl] = useState(settings.scriptUrl);
   const [appName, setAppName] = useState(settings.appName || 'EduConnect');
-  const [schoolName, setSchoolName] = useState(settings.schoolName || '');
+  const [schoolName, setSchoolName] = useState(settings.schoolName || 'SDN Citapen');
   const [tahunPelajaran, setTahunPelajaran] = useState(settings.tahunPelajaran || '2025/2026');
   const [folderId, setFolderId] = useState(settings.folderId || '');
   const [adminUser, setAdminUser] = useState(settings.adminUsername || 'admin');

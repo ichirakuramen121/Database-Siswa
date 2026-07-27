@@ -253,7 +253,7 @@ export default function AttendancePrint() {
               <div className="text-center mb-4 print:mb-2">
                 <h1 className="text-xl print:text-base font-bold uppercase mb-0.5 tracking-tight">DAFTAR HADIR SISWA</h1>
                 <h2 className="text-sm print:text-xs font-semibold text-gray-800">
-                  {settings.appName || 'SEKOLAH DASAR'} &nbsp;|&nbsp; KELAS: {selectedClass} &nbsp;|&nbsp; BULAN: {months[selectedMonth].toUpperCase()} {selectedYear}
+                  {(settings.schoolName || settings.appName || 'SDN Citapen').toUpperCase()} &nbsp;|&nbsp; KELAS: {selectedClass} &nbsp;|&nbsp; BULAN: {months[selectedMonth].toUpperCase()} {selectedYear}
                 </h2>
               </div>
 
@@ -430,7 +430,7 @@ export default function AttendancePrint() {
                       BERKAS ADMINISTRASI KELAS {selectedClass}
                     </h1>
                     <p className="text-lg font-bold text-gray-700 print:text-black uppercase tracking-wider">
-                      {settings.appName || 'SEKOLAH DASAR'}
+                      {settings.schoolName || settings.appName || 'SDN Citapen'}
                     </p>
                     <p className="text-sm font-semibold text-gray-500 print:text-black mt-1">
                       TAHUN PELAJARAN {selectedAcademicYear}
@@ -440,7 +440,7 @@ export default function AttendancePrint() {
                   <div className="my-12 py-8 border-y-2 border-dashed border-indigo-200 print:border-black text-left max-w-md mx-auto space-y-3 text-sm font-medium">
                     <div className="flex justify-between">
                       <span className="text-gray-600 print:text-black">Satuan Pendidikan:</span>
-                      <span className="font-bold text-gray-900 print:text-black">{settings.appName || 'SD Negeri'}</span>
+                      <span className="font-bold text-gray-900 print:text-black">{settings.schoolName || settings.appName || 'SDN Citapen'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600 print:text-black">Kelas / Rombel:</span>

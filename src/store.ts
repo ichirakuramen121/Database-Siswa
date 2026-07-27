@@ -14,7 +14,7 @@ export const useStore = create<AppState>()(
       isAuthenticated: false,
       students: [],
       teachers: [],
-      settings: { scriptUrl: '', appName: 'EduConnect', folderId: '', tahunPelajaran: '2025/2026', schoolName: '' },
+      settings: { scriptUrl: '', appName: 'EduConnect', folderId: '', tahunPelajaran: '2025/2026', schoolName: 'SDN Citapen' },
       isLoading: false,
       error: null,
       lastSyncedAt: null,

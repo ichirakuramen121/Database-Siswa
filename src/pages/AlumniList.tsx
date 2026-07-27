@@ -417,7 +417,7 @@ export default function AlumniList() {
            
            <div className="text-center mb-6 border-b-2 border-slate-800 pb-3">
               <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight">SURAT KETERANGAN / BIODATA ALUMNI</h1>
-              <p className="text-slate-600 text-sm font-medium">{settings.appName || 'Sekolah Dasar'}</p>
+              <p className="text-slate-600 text-sm font-medium">{settings.schoolName || settings.appName || 'SDN Citapen'}</p>
            </div>
            
            <div className="flex flex-row justify-between items-start gap-6 mb-6">
