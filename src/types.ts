@@ -73,3 +73,4 @@ export interface AppState {
   setLastSyncedAt: (time: string | null) => void;
   setIsSyncingGlobal: (syncing: boolean) => void;
 }
+
