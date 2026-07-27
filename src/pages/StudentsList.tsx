@@ -46,7 +46,6 @@ export default function StudentsList() {
   }, [searchTerm, filterClass, sortBy]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const csvInputRef = useRef<HTMLInputElement>(null);
 
   // Sync to sheets immediately when data is changed
   const triggerSync = async (updatedStudents: Student[]) => {
@@ -71,6 +70,9 @@ export default function StudentsList() {
   // Derived filtered & sorted data
   const filteredStudents = students.filter(s => {
     if (!s) return false;
+    // Exclude students who moved out, left, or graduated so they don't pile up in Data Siswa
+    if (s.status === 'Pindah' || s.status === 'Keluar' || s.status === 'Lulus') return false;
+
     const searchString = searchTerm.toLowerCase();
     const nameStr = String(s.name || '').toLowerCase();
     const nisStr = String(s.nis || '').toLowerCase();
@@ -107,27 +109,6 @@ export default function StudentsList() {
     safePage * itemsPerPage
   );
 
-  const downloadCSVTemplate = () => {
-    const headers = ["NIS", "NISN", "Nama Lengkap", "Kelas", "L/P", "Tempat Lahir", "Tgl Lahir (YYYY-MM-DD)", "Alamat", "Nama Orang Tua", "Status (Aktif/Lulus/Pindah/Keluar)"];
-    const rows = [
-      ["252601001", "1234567890", "Ahmad Fauzi", "1A", "L", "Bandung", "2015-05-12", "Jl. Merdeka No. 10", "Slamet", "Aktif"],
-      ["252601002", "0987654321", "Siti Aminah", "1A", "P", "Jakarta", "2015-08-22", "Jl. Kenanga No. 4", "Budi", "Aktif"]
-    ];
-    
-    // Create CSV payload
-    const csvRows = [headers.join(","), ...rows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(","))];
-    const csvContent = "\uFEFF" + csvRows.join("\n"); // Add BOM for excel auto detection
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "template_siswa_sd.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const processStudentImport = async (parsed: Partial<Student>[], mode: 'UPDATE' | 'SKIP_EXISTING' | 'ADD_ALL') => {
     if (parsed.length === 0) {
       alert("Tidak ada data valid yang diimport.");
@@ -156,6 +137,7 @@ export default function StudentsList() {
           name: imp.name?.trim() || 'Siswa',
           class: imp.class || '1A',
           gender: imp.gender || 'L',
+          pob: imp.pob || '',
           dob: imp.dob || '',
           address: imp.address || '',
           parentName: imp.parentName || '',
@@ -194,6 +176,7 @@ export default function StudentsList() {
             name: imp.name?.trim() || existing.name,
             class: imp.class || existing.class,
             gender: imp.gender || existing.gender,
+            pob: imp.pob || existing.pob,
             dob: imp.dob || existing.dob,
             address: imp.address || existing.address,
             parentName: imp.parentName || existing.parentName,
@@ -213,6 +196,7 @@ export default function StudentsList() {
           name: imp.name?.trim() || 'Siswa',
           class: imp.class || '1A',
           gender: imp.gender || 'L',
+          pob: imp.pob || '',
           dob: imp.dob || '',
           address: imp.address || '',
           parentName: imp.parentName || '',
@@ -251,34 +235,6 @@ export default function StudentsList() {
     } finally {
       setIsProcessingImport(false);
     }
-  };
-
-  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        const parsed = parseCSVToStudents(text);
-        if (parsed.length === 0) {
-          alert("File CSV kosong atau tidak ada data valid.");
-          return;
-        }
-        setImportPreview({
-          fileName: file.name,
-          fileType: 'CSV',
-          parsedData: parsed
-        });
-        setImportMode('UPDATE');
-      } catch (err) {
-        console.error(err);
-        alert("Gagal mengimpor file CSV.");
-      }
-    };
-    reader.readAsText(file);
-    if (csvInputRef.current) csvInputRef.current.value = '';
   };
 
   const downloadPDF = () => {
@@ -430,24 +386,11 @@ export default function StudentsList() {
             ref={fileInputRef}
             onChange={handleImport}
           />
-          <input 
-            type="file" 
-            accept=".csv"
-            className="hidden" 
-            ref={csvInputRef}
-            onChange={handleCSVImport}
-          />
           <button onClick={() => downloadStudentExcelTemplate()} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100/70 font-semibold text-xs sm:text-sm shadow-sm transition active:scale-95 duration-150">
             <FileSpreadsheet size={16} /> <span className="truncate">Template Excel</span>
           </button>
           <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-green-600 text-white rounded-xl shadow-lg shadow-green-200/50 hover:bg-green-700 font-medium text-xs sm:text-sm transition active:scale-95 duration-150">
             <Upload size={16} /> <span className="truncate">Import Excel</span>
-          </button>
-          <button onClick={downloadCSVTemplate} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 font-medium text-xs sm:text-sm transition active:scale-95 duration-150">
-            <DownloadCloud size={16} /> <span className="truncate">Template CSV</span>
-          </button>
-          <button onClick={() => csvInputRef.current?.click()} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-xs sm:text-sm">
-            <UploadCloud size={16} /> <span className="truncate">Import CSV</span>
           </button>
           <button onClick={() => exportToExcel(filteredStudents, `Daftar_Siswa_dengan_NISN_${new Date().toISOString().slice(0, 10)}.xlsx`)} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 font-medium text-xs sm:text-sm transition active:scale-95 duration-150">
             <FileSpreadsheet size={16} /> <span className="truncate">Export Excel</span>
@@ -511,6 +454,7 @@ export default function StudentsList() {
                 <th className="px-6 py-4 font-bold border border-indigo-100 text-indigo-900">Nama Lengkap</th>
                 <th className="px-4 py-4 font-bold text-center border border-indigo-100 text-indigo-900">Kelas</th>
                 <th className="px-4 py-4 font-bold text-center border border-indigo-100 text-indigo-900">L/P</th>
+                <th className="px-4 py-4 font-bold border border-indigo-100 text-indigo-900">Tempat, Tgl Lahir</th>
                 <th className="px-6 py-4 font-bold border border-indigo-100 text-indigo-900">Status</th>
                 <th className="px-6 py-4 font-bold text-right border border-indigo-100 text-indigo-900">Aksi</th>
               </tr>
@@ -518,7 +462,7 @@ export default function StudentsList() {
             <tbody className="divide-y divide-indigo-50/50">
               {sortedStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500 font-medium tracking-wide border border-indigo-100">
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500 font-medium tracking-wide border border-indigo-100">
                     Tidak ada data siswa.
                   </td>
                 </tr>
@@ -570,6 +514,10 @@ export default function StudentsList() {
                     </td>
                     <td className="px-4 py-4 text-center border border-indigo-100">
                        <span className="text-gray-600 font-bold">{student.gender}</span>
+                    </td>
+                    <td className="px-4 py-4 border border-indigo-100 text-xs">
+                      {student.pob ? <span className="font-semibold text-gray-900 block">{student.pob}</span> : null}
+                      <span className="text-gray-500 font-medium">{formatDate(student.dob) || '-'}</span>
                     </td>
                     <td className="px-6 py-4 border border-indigo-100">
                        <span className={cn(
@@ -1004,36 +952,39 @@ export default function StudentsList() {
 
       {/* Print View */}
       {printStudent && (
-        <div id="printable-area" className="bg-white p-8 max-w-2xl mx-auto fixed inset-0 overflow-y-auto print:overflow-visible print:relative print:inset-auto print:p-0 z-[200]">
-           <div className="flex justify-between items-start no-print mb-8">
+        <div id="printable-area" className="bg-white p-6 sm:p-8 max-w-2xl mx-auto fixed inset-0 overflow-y-auto print:overflow-visible print:relative print:inset-auto print:p-0 z-[200] print-single-page">
+           <div className="flex justify-between items-start no-print mb-6">
               <button onClick={() => window.print()} className="btn">Cetak Sekarang</button>
               <button onClick={() => setPrintStudent(null)} className="btn-outline"><X size={18} /> Tutup</button>
            </div>
            
-           <div className="text-center mb-8 border-b-2 border-slate-800 pb-4">
-              <h1 className="text-2xl font-bold uppercase">Biodata Siswa</h1>
-              <p className="text-slate-600">Sekolah Dasar</p>
+           <div className="text-center mb-6 border-b-2 border-slate-800 pb-3">
+              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight">Biodata Siswa</h1>
+              <p className="text-slate-600 text-sm font-medium">Sekolah Dasar</p>
            </div>
            
-           <div className="flex flex-row justify-between items-start gap-8 mb-8">
-              <table className="w-full text-left text-base sm:text-lg flex-1">
+           <div className="flex flex-row justify-between items-start gap-6 mb-6">
+              <table className="w-full text-left text-sm sm:text-base flex-1">
                 <tbody>
-                  <tr><td className="py-1 sm:py-2 w-1/3 md:w-1/4 font-semibold">NIS / NISN</td><td className="py-1 sm:py-2">: {printStudent.nis} {printStudent.nisn ? `/ ${printStudent.nisn}` : ''}</td></tr>
-                  <tr><td className="py-1 sm:py-2 font-semibold">Nama Lengkap</td><td className="py-1 sm:py-2">: {printStudent.name}</td></tr>
-                  <tr><td className="py-1 sm:py-2 font-semibold">Kelas</td><td className="py-1 sm:py-2">: {printStudent.class}</td></tr>
-                  <tr><td className="py-1 sm:py-2 font-semibold">Jenis Kelamin</td><td className="py-1 sm:py-2">: {printStudent.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</td></tr>
-                  <tr><td className="py-1 sm:py-2 font-semibold">Tempat, Tanggal Lahir</td><td className="py-1 sm:py-2">: {printStudent.pob ? `${printStudent.pob}, ` : ''}{formatDate(printStudent.dob)} {printStudent.dob && `(Usia: ${formatAge(printStudent.dob)})`}</td></tr>
-                  <tr><td className="py-1 sm:py-2 font-semibold">Nama Orang Tua</td><td className="py-1 sm:py-2">: {printStudent.parentName}</td></tr>
-                  <tr><td className="py-1 sm:py-2 font-semibold align-top">Alamat</td><td className="py-1 sm:py-2">: {printStudent.address}</td></tr>
-                  <tr><td className="py-1 sm:py-2 font-semibold">Status</td><td className="py-1 sm:py-2">: {printStudent.status}</td></tr>
+                  <tr><td className="py-1.5 w-1/3 font-semibold text-gray-700">NIS / NISN</td><td className="py-1.5 font-mono font-medium">: {printStudent.nis} {printStudent.nisn ? `/ ${printStudent.nisn}` : ''}</td></tr>
+                  <tr>
+                    <td className="py-1.5 font-semibold text-gray-700">Nama Lengkap</td>
+                    <td className="py-1.5 font-bold text-gray-900">: <span className={printStudent.name && printStudent.name.length > 30 ? "text-xs font-bold leading-tight" : printStudent.name && printStudent.name.length > 20 ? "text-sm font-bold" : "text-base font-bold"}>{printStudent.name}</span></td>
+                  </tr>
+                  <tr><td className="py-1.5 font-semibold text-gray-700">Kelas</td><td className="py-1.5 font-bold">: {printStudent.class}</td></tr>
+                  <tr><td className="py-1.5 font-semibold text-gray-700">Jenis Kelamin</td><td className="py-1.5">: {printStudent.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</td></tr>
+                  <tr><td className="py-1.5 font-semibold text-gray-700">Tempat, Tgl Lahir</td><td className="py-1.5">: {printStudent.pob ? `${printStudent.pob}, ` : ''}{formatDate(printStudent.dob)} {printStudent.dob && `(Usia: ${formatAge(printStudent.dob)})`}</td></tr>
+                  <tr><td className="py-1.5 font-semibold text-gray-700">Nama Orang Tua</td><td className="py-1.5">: {printStudent.parentName || '-'}</td></tr>
+                  <tr><td className="py-1.5 font-semibold text-gray-700 align-top">Alamat</td><td className="py-1.5">: {printStudent.address || '-'}</td></tr>
+                  <tr><td className="py-1.5 font-semibold text-gray-700">Status</td><td className="py-1.5">: {printStudent.status}</td></tr>
                   {printStudent.status === 'Lulus' && (
-                     <tr><td className="py-1 sm:py-2 font-semibold">Nomor Ijazah</td><td className="py-1 sm:py-2">: {printStudent.ijazahNo || '-'}</td></tr>
+                     <tr><td className="py-1.5 font-semibold text-gray-700">Nomor Ijazah</td><td className="py-1.5 font-bold">: {printStudent.ijazahNo || '-'}</td></tr>
                   )}
                 </tbody>
               </table>
 
               {printStudent.fotoUrl && (
-                 <div className="w-[3cm] h-[4cm] sm:w-[4cm] sm:h-[6cm] shrink-0 border-2 border-slate-800 p-1 bg-white relative flex items-center justify-center text-center overflow-hidden no-print-bg">
+                 <div className="w-[3cm] h-[4cm] sm:w-[3.5cm] sm:h-[5cm] shrink-0 border-2 border-slate-800 p-1 bg-white relative flex items-center justify-center text-center overflow-hidden no-print-bg">
                     <img 
                       src={getGoogleDriveDirectImageUrl(printStudent.fotoUrl)} 
                       alt="Foto Siswa" 
@@ -1043,7 +994,7 @@ export default function StudentsList() {
                         if (!(e.target as HTMLImageElement).parentElement?.querySelector('.error-text')) {
                           const span = document.createElement('span');
                           span.className = "error-text text-[10px] text-gray-500 absolute inline-block p-1";
-                          span.innerText = "Foto tidak dapat ditampilkan (Mungkin Folder Google Drive belum di set Publik)";
+                          span.innerText = "Foto tidak dapat ditampilkan";
                           (e.target as HTMLImageElement).parentElement?.appendChild(span);
                         }
                       }}
@@ -1052,8 +1003,8 @@ export default function StudentsList() {
               )}
            </div>
            
-           <div className="mt-16 text-right">
-              <p className="mb-16">.................., {new Date().toLocaleDateString('id-ID')}</p>
+           <div className="mt-10 text-right text-sm">
+              <p className="mb-12">.................., {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               <p className="font-semibold">( Administrasi Sekolah )</p>
            </div>
         </div>
@@ -1061,44 +1012,48 @@ export default function StudentsList() {
 
       {/* Print ListView */}
       {isPrintListMode && (
-        <div id="printable-area" className="bg-white p-8 max-w-5xl mx-auto fixed inset-0 overflow-y-auto print:overflow-visible print:relative print:inset-auto print:p-0 z-[200]">
-           <div className="flex justify-between items-start no-print mb-8">
+        <div id="printable-area" className="bg-white p-6 sm:p-8 max-w-5xl mx-auto fixed inset-0 overflow-y-auto print:overflow-visible print:relative print:inset-auto print:p-0 z-[200]">
+           <div className="flex justify-between items-start no-print mb-6">
               <button onClick={() => window.print()} className="btn">Cetak Sekarang</button>
               <button onClick={() => setIsPrintListMode(false)} className="btn-outline"><X size={18} /> Tutup</button>
            </div>
            
            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold uppercase">DAFTAR SISWA SD</h1>
-              <p className="text-slate-600">
+              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight">DAFTAR SISWA SD</h1>
+              <p className="text-slate-600 font-semibold text-sm">
                 {filterClass ? `KELAS ${filterClass}` : 'SEMUA KELAS'}
               </p>
            </div>
            
-           <table className="w-full text-left border-collapse border border-slate-400">
+           <table className="w-full text-left border-collapse border border-slate-400 print-table">
              <thead>
                <tr className="bg-slate-100">
-                 <th className="border border-slate-400 p-2 font-bold text-center">No</th>
-                 <th className="border border-slate-400 p-2 font-bold">NIS / NISN</th>
+                 <th className="border border-slate-400 p-2 font-bold text-center w-10">No</th>
+                 <th className="border border-slate-400 p-2 font-bold w-36">NIS / NISN</th>
                  <th className="border border-slate-400 p-2 font-bold">Nama Lengkap</th>
-                 <th className="border border-slate-400 p-2 font-bold text-center">L/P</th>
-                 <th className="border border-slate-400 p-2 font-bold text-center">Kelas</th>
-                 <th className="border border-slate-400 p-2 font-bold text-center">Status</th>
+                 <th className="border border-slate-400 p-2 font-bold text-center w-12">L/P</th>
+                 <th className="border border-slate-400 p-2 font-bold text-center w-16">Kelas</th>
+                 <th className="border border-slate-400 p-2 font-bold text-center w-20">Status</th>
                </tr>
              </thead>
              <tbody>
                {sortedStudents.length === 0 ? (
                  <tr><td colSpan={6} className="border border-slate-400 p-4 text-center">Tidak ada data</td></tr>
                ) : (
-                 sortedStudents.map((s, idx) => (
-                   <tr key={s.id}>
-                     <td className="border border-slate-400 p-2 text-center">{idx + 1}</td>
-                     <td className="border border-slate-400 p-2">{s.nis} {s.nisn ? `/ ${s.nisn}` : ''}</td>
-                     <td className="border border-slate-400 p-2">{s.name}</td>
-                     <td className="border border-slate-400 p-2 text-center">{s.gender}</td>
-                     <td className="border border-slate-400 p-2 text-center">{s.class}</td>
-                     <td className="border border-slate-400 p-2 text-center">{s.status === 'Pindah' ? 'Mutasi' : s.status}</td>
-                   </tr>
-                 ))
+                 sortedStudents.map((s, idx) => {
+                   const nLen = s.name ? s.name.length : 0;
+                   const nameFontClass = nLen > 32 ? "text-[9px] leading-tight" : nLen > 22 ? "text-[10px] leading-tight" : "text-xs";
+                   return (
+                     <tr key={s.id}>
+                       <td className="border border-slate-400 p-1.5 text-center text-xs font-medium">{idx + 1}</td>
+                       <td className="border border-slate-400 p-1.5 text-xs font-mono">{s.nis} {s.nisn ? `/ ${s.nisn}` : ''}</td>
+                       <td className={`border border-slate-400 p-1.5 font-bold uppercase ${nameFontClass}`}>{s.name}</td>
+                       <td className="border border-slate-400 p-1.5 text-center text-xs font-medium">{s.gender}</td>
+                       <td className="border border-slate-400 p-1.5 text-center text-xs font-semibold">{s.class}</td>
+                       <td className="border border-slate-400 p-1.5 text-center text-xs font-medium">{s.status === 'Pindah' ? 'Mutasi' : s.status}</td>
+                     </tr>
+                   );
+                 })
                )}
              </tbody>
            </table>

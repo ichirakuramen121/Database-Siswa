@@ -20,10 +20,14 @@ export default function Dashboard() {
   const { students, teachers, settings, setStudents, setTeachers, setLoading, setLastSyncedAt, setIsSyncingGlobal } = useStore();
   const [syncStatus, setSyncStatus] = useState('');
 
-  // Primary stats calculations
-  const totalSiswa = students.length;
-  const countLaki = students.filter(s => s.gender === 'L').length;
-  const countPerempuan = students.filter(s => s.gender === 'P').length;
+  // Primary stats calculations (Siswa yang ada di Data Siswa)
+  const activeStudentsList = useMemo(() => {
+    return students.filter(s => s && (s.status === 'Aktif' || (!s.status && s.status !== 'Pindah' && s.status !== 'Keluar' && s.status !== 'Lulus')));
+  }, [students]);
+
+  const totalSiswa = activeStudentsList.length;
+  const countLaki = activeStudentsList.filter(s => s.gender === 'L').length;
+  const countPerempuan = activeStudentsList.filter(s => s.gender === 'P').length;
   
   const activeClasses = useMemo(() => {
     return getActiveClasses(students);

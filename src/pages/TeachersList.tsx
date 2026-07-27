@@ -4,11 +4,22 @@ import { Teacher } from '../types';
 import { 
   Search, Plus, Edit2, Trash2, X, Save, Filter, 
   GraduationCap, Phone, Mail, CheckCircle2, XCircle, Users,
-  DownloadCloud, UploadCloud, FileSpreadsheet, RefreshCw, UserCheck, PlusCircle
+  Upload, FileSpreadsheet, RefreshCw, UserCheck, Award,
+  UploadCloud, PlusCircle, Laptop, Shield, Key, Sparkles,
+  FileText, BookOpen, Briefcase, Building2, Wrench
 } from 'lucide-react';
 import { generateId, cn, getAllClasses } from '../lib/utils';
 import { fetchFromGAS } from '../lib/api';
-import { exportTeachersToExcel, parseCSVToTeachers, importTeachersFromExcel, downloadTeacherExcelTemplate } from '../lib/excel';
+import { exportTeachersToExcel, importTeachersFromExcel, downloadTeacherExcelTemplate } from '../lib/excel';
+
+const TENDIK_PRESETS = [
+  'Operator Sekolah',
+  'Penjaga Sekolah',
+  'Satpam / Keamanan',
+  'Petugas Kebersihan',
+  'Tenaga Administrasi (TU)',
+  'Petugas Perpustakaan',
+];
 
 export default function TeachersList() {
   const { teachers, students, settings, addTeacher, updateTeacher, deleteTeacher, setLoading, setIsSyncingGlobal } = useStore();
@@ -27,6 +38,8 @@ export default function TeachersList() {
   const [name, setName] = useState('');
   const [gender, setGender] = useState<'L' | 'P'>('L');
   const [assignedClass, setAssignedClass] = useState('None');
+  const [customRoleInput, setCustomRoleInput] = useState('');
+  const [isCustomRole, setIsCustomRole] = useState(false);
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'Aktif' | 'Nonaktif'>('Aktif');
@@ -43,27 +56,17 @@ export default function TeachersList() {
   const [importMode, setImportMode] = useState<'UPDATE' | 'SKIP_EXISTING' | 'ADD_ALL'>('UPDATE');
   const [isProcessingImport, setIsProcessingImport] = useState(false);
 
-  const csvInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const downloadCSVTemplate = () => {
-    const headers = ["NIP", "Nama Lengkap", "L/P", "Wali Kelas", "No Telepon", "Email", "Status (Aktif/Nonaktif)"];
-    const rows = [
-      ["198503122010121002", "Budi Santoso, S.Pd.", "L", "1A", "081234567890", "budi.santoso@sekolah.sch.id", "Aktif"],
-      ["199008242015042003", "Siti Rahma, S.Pd.", "P", "None", "087654321098", "siti.rahma@sekolah.sch.id", "Aktif"]
-    ];
-    
-    // Create CSV payload
-    const csvRows = [headers.join(","), ...rows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(","))];
-    const csvContent = "\uFEFF" + csvRows.join("\n"); // Add BOM for excel auto detection
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "template_guru_sd.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // List of available classes derived from real-time student data
+  const classesList = useMemo(() => {
+    return getAllClasses(students);
+  }, [students]);
+
+  const isTendikRole = (role: string) => {
+    if (!role || role === 'None' || role === 'Kepala Sekolah' || role.toLowerCase().includes('kepala')) return false;
+    if (classesList.includes(role) || /^[1-6][A-Z]?$/i.test(role.trim())) return false;
+    return true;
   };
 
   const processTeacherImport = async (parsed: Partial<Teacher>[], mode: 'UPDATE' | 'SKIP_EXISTING' | 'ADD_ALL' = 'UPDATE') => {
@@ -118,7 +121,7 @@ export default function TeachersList() {
         const newTeacher: Teacher = {
           id: generateId(),
           nip: impNip,
-          name: imp.name?.trim() || 'Guru',
+          name: imp.name?.trim() || 'Pegawai',
           gender: imp.gender || 'L',
           class: imp.class || 'None',
           phone: imp.phone || '',
@@ -136,7 +139,7 @@ export default function TeachersList() {
     const finalTeachers = useStore.getState().teachers;
     await triggerSync(finalTeachers);
     
-    let msg = `Proses Import Guru Selesai!\n• ${addedCount} data baru ditambahkan\n• ${updatedCount} data lama diperbarui/ditimpa`;
+    let msg = `Proses Import GTK Selesai!\n• ${addedCount} data baru ditambahkan\n• ${updatedCount} data lama diperbarui/ditimpa`;
     if (skippedCount > 0) {
       msg += `\n• ${skippedCount} data diabaikan (sudah ada)`;
     }
@@ -157,14 +160,14 @@ export default function TeachersList() {
     }
   };
 
-  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       const parsed = await importTeachersFromExcel(file);
       if (parsed.length === 0) {
-        alert("File kosong atau tidak ada data guru yang valid.");
+        alert("File kosong atau tidak ada data yang valid.");
         return;
       }
 
@@ -175,9 +178,9 @@ export default function TeachersList() {
       setImportMode('UPDATE');
     } catch (err: any) {
       console.error(err);
-      alert("Gagal mengimpor file Excel/CSV: " + (err?.message || err));
+      alert("Gagal mengimpor file Excel: " + (err?.message || err));
     }
-    if (csvInputRef.current) csvInputRef.current.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Sync to sheets immediately when data is changed
@@ -192,7 +195,7 @@ export default function TeachersList() {
         teachers: updatedTeachers
       });
     } catch (e) {
-      console.error("Auto sync teachers failed:", e);
+      console.error("Auto sync GTK failed:", e);
     } finally {
       setLoading(false);
       setIsSyncingGlobal(false);
@@ -205,6 +208,8 @@ export default function TeachersList() {
     setName('');
     setGender('L');
     setAssignedClass('None');
+    setIsCustomRole(false);
+    setCustomRoleInput('');
     setPhone('');
     setEmail('');
     setStatus('Aktif');
@@ -216,10 +221,21 @@ export default function TeachersList() {
     setNip(t.nip);
     setName(t.name);
     setGender(t.gender);
-    setAssignedClass(t.class);
     setPhone(t.phone);
     setEmail(t.email);
     setStatus(t.status);
+
+    const isPresetOption = t.class === 'Kepala Sekolah' || t.class === 'None' || classesList.includes(t.class) || TENDIK_PRESETS.includes(t.class);
+    if (isPresetOption) {
+      setAssignedClass(t.class);
+      setIsCustomRole(false);
+      setCustomRoleInput('');
+    } else {
+      setAssignedClass('CUSTOM');
+      setIsCustomRole(true);
+      setCustomRoleInput(t.class);
+    }
+
     setIsModalOpen(true);
   };
 
@@ -227,12 +243,14 @@ export default function TeachersList() {
     e.preventDefault();
     if (!name.trim()) return;
 
+    const finalRole = isCustomRole ? (customRoleInput.trim() || 'Tenaga Kependidikan') : assignedClass;
+
     if (editingTeacher) {
       const updated: Partial<Teacher> = {
         nip,
         name,
         gender,
-        class: assignedClass,
+        class: finalRole,
         phone,
         email,
         status,
@@ -248,7 +266,7 @@ export default function TeachersList() {
         nip,
         name,
         gender,
-        class: assignedClass,
+        class: finalRole,
         phone,
         email,
         status,
@@ -265,17 +283,12 @@ export default function TeachersList() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus data guru "${name}"?`)) {
+    if (window.confirm(`Apakah Anda yakin ingin menghapus data pegawai/guru "${name}"?`)) {
       const updated = teachers.filter(t => t.id !== id);
       deleteTeacher(id);
       await triggerSync(updated);
     }
   };
-
-  // List of available classes derived from real-time student data
-  const classesList = useMemo(() => {
-    return getAllClasses(students);
-  }, [students]);
 
   // Filter & Search logic
   const filteredTeachers = useMemo(() => {
@@ -283,14 +296,29 @@ export default function TeachersList() {
       const matchesSearch = 
         t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         t.nip.includes(searchTerm) || 
-        (t.email && t.email.toLowerCase().includes(searchTerm.toLowerCase()));
+        (t.email && t.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (t.class && t.class.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesStatus = statusFilter === 'Semua' || t.status === statusFilter;
-      const matchesClass = classFilter === 'Semua' || t.class === classFilter;
+      
+      let matchesClass = true;
+      if (classFilter === 'Kepala Sekolah') {
+        matchesClass = t.class === 'Kepala Sekolah' || t.class.toLowerCase().includes('kepala');
+      } else if (classFilter === 'Guru') {
+        matchesClass = !isTendikRole(t.class);
+      } else if (classFilter === 'Wali Kelas') {
+        matchesClass = t.class !== 'None' && t.class !== 'Kepala Sekolah' && !t.class.toLowerCase().includes('kepala') && !isTendikRole(t.class);
+      } else if (classFilter === 'None') {
+        matchesClass = t.class === 'None';
+      } else if (classFilter === 'Tendik') {
+        matchesClass = isTendikRole(t.class);
+      } else if (classFilter !== 'Semua') {
+        matchesClass = t.class === classFilter;
+      }
       
       return matchesSearch && matchesStatus && matchesClass;
     });
-  }, [teachers, searchTerm, statusFilter, classFilter]);
+  }, [teachers, searchTerm, statusFilter, classFilter, classesList]);
 
   // Sort logic
   const sortedTeachers = useMemo(() => {
@@ -318,23 +346,107 @@ export default function TeachersList() {
     }
   };
 
+  const renderRoleBadge = (role: string) => {
+    if (!role || role === 'None') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          <UserCheck size={13} className="text-blue-500" />
+          Guru Mapel
+        </span>
+      );
+    }
+    if (role === 'Kepala Sekolah' || role.toLowerCase().includes('kepala')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
+          <Award size={13} className="text-amber-600" />
+          Kepala Sekolah
+        </span>
+      );
+    }
+    if (role.toLowerCase().includes('operator')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+          <Laptop size={13} className="text-purple-600" />
+          {role}
+        </span>
+      );
+    }
+    if (role.toLowerCase().includes('penjaga')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200">
+          <Key size={13} className="text-orange-600" />
+          {role}
+        </span>
+      );
+    }
+    if (role.toLowerCase().includes('satpam') || role.toLowerCase().includes('keamanan')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
+          <Shield size={13} className="text-slate-600" />
+          {role}
+        </span>
+      );
+    }
+    if (role.toLowerCase().includes('bersih') || role.toLowerCase().includes('kebersihan')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+          <Sparkles size={13} className="text-emerald-600" />
+          {role}
+        </span>
+      );
+    }
+    if (role.toLowerCase().includes('administrasi') || role.toLowerCase().includes('tu') || role.toLowerCase().includes('tata usaha')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-100 text-cyan-800 border border-cyan-200">
+          <FileText size={13} className="text-cyan-600" />
+          {role}
+        </span>
+      );
+    }
+    if (role.toLowerCase().includes('perpus') || role.toLowerCase().includes('pustaka')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200">
+          <BookOpen size={13} className="text-teal-600" />
+          {role}
+        </span>
+      );
+    }
+    if (classesList.includes(role) || /^[1-6][A-Z]?$/i.test(role)) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">
+          <GraduationCap size={13} className="text-indigo-600" />
+          Wali Kelas {role}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-violet-100 text-violet-800 border border-violet-200">
+        <Briefcase size={13} className="text-violet-600" />
+        {role}
+      </span>
+    );
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-10">
       
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-indigo-900">Data Guru</h2>
-          <p className="text-gray-500 mt-1 font-medium">Kelola data tenaga pengajar beserta penugasan kelas.</p>
+          <h2 className="text-3xl font-bold tracking-tight text-indigo-900 flex items-center gap-3">
+            <GraduationCap className="text-indigo-600" size={32} />
+            Data Guru & Tenaga Kependidikan (GTK)
+          </h2>
+          <p className="text-gray-500 mt-1 font-medium">Kelola data seluruh pendidik (Guru) dan tenaga kependidikan (Operator, Penjaga, Satpam, Kebersihan, TU).</p>
         </div>
         
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
           <input 
             type="file" 
-            accept=".csv, .xlsx, .xls, .txt"
+            accept=".xlsx, .xls"
             className="hidden" 
-            ref={csvInputRef}
-            onChange={handleCSVImport}
+            ref={fileInputRef}
+            onChange={handleExcelImport}
           />
           <button 
             onClick={() => downloadTeacherExcelTemplate()} 
@@ -343,19 +455,13 @@ export default function TeachersList() {
             <FileSpreadsheet size={16} /> <span className="truncate">Template Excel</span>
           </button>
           <button 
-            onClick={downloadCSVTemplate} 
-            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100/50 font-medium text-xs sm:text-sm transition active:scale-95 duration-150"
+            onClick={() => fileInputRef.current?.click()} 
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-green-600 text-white rounded-xl shadow-lg shadow-green-200/50 hover:bg-green-700 font-medium text-xs sm:text-sm transition active:scale-95 duration-150"
           >
-            <DownloadCloud size={16} /> <span className="truncate">Template CSV</span>
+            <Upload size={16} /> <span className="truncate">Import Excel</span>
           </button>
           <button 
-            onClick={() => csvInputRef.current?.click()} 
-            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-200/50 hover:bg-amber-600 font-medium text-xs sm:text-sm transition active:scale-95 duration-150"
-          >
-            <UploadCloud size={16} /> <span className="truncate">Import File</span>
-          </button>
-          <button 
-            onClick={() => exportTeachersToExcel(filteredTeachers, `Daftar_Guru_${new Date().toISOString().slice(0, 10)}.xlsx`)} 
+            onClick={() => exportTeachersToExcel(filteredTeachers, `Daftar_GTK_${new Date().toISOString().slice(0, 10)}.xlsx`)} 
             className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200/50 hover:bg-emerald-700 font-medium text-xs sm:text-sm transition active:scale-95 duration-150"
           >
             <FileSpreadsheet size={16} /> <span className="truncate">Export Excel</span>
@@ -365,8 +471,57 @@ export default function TeachersList() {
             className="btn flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2.5 rounded-xl shadow-md transition-all active:scale-95 duration-150 text-xs sm:text-sm col-span-2 sm:col-span-1"
           >
             <Plus size={16} />
-            <span className="truncate">Tambah Guru</span>
+            <span className="truncate">Tambah GTK</span>
           </button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-white/80 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+            <Users size={22} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Total Pegawai / GTK</p>
+            <p className="text-xl font-black text-indigo-950">{teachers.length} <span className="text-xs font-normal text-gray-500">Orang</span></p>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-white/80 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+            <GraduationCap size={22} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Guru / Pengajar</p>
+            <p className="text-xl font-black text-amber-700">
+              {teachers.filter(t => !isTendikRole(t.class)).length} <span className="text-xs font-normal text-gray-500">Orang</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-white/80 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
+            <Briefcase size={22} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Tenaga Kependidikan</p>
+            <p className="text-xl font-black text-purple-700">
+              {teachers.filter(t => isTendikRole(t.class)).length} <span className="text-xs font-normal text-gray-500">Staff</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-white/80 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+            <UserCheck size={22} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Status Aktif</p>
+            <p className="text-xl font-black text-emerald-700">
+              {teachers.filter(t => t.status === 'Aktif').length} <span className="text-xs font-normal text-gray-500">Orang</span>
+            </p>
+          </div>
         </div>
       </div>
 
@@ -379,7 +534,7 @@ export default function TeachersList() {
             <Search className="absolute left-4 top-3.5 text-gray-400 w-5 h-5" />
             <input 
               type="text" 
-              placeholder="Cari NIP, nama guru, atau email..." 
+              placeholder="Cari NIP, nama, atau jabatan..." 
               className="input pl-11 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -400,7 +555,7 @@ export default function TeachersList() {
             </select>
           </div>
 
-          {/* Class Filter */}
+          {/* Class / Jabatan Filter */}
           <div className="flex items-center gap-2">
             <GraduationCap size={16} className="text-indigo-500" />
             <select 
@@ -408,10 +563,17 @@ export default function TeachersList() {
               value={classFilter}
               onChange={(e) => setClassFilter(e.target.value)}
             >
-              <option value="Semua">Semua Kelas</option>
-              <option value="None">Bukan Wali Kelas (Guru Mapel)</option>
+              <option value="Semua">Semua Jabatan / Tugas</option>
+              <option value="Kepala Sekolah">⭐ Kepala Sekolah</option>
+              <option value="Guru">📘 Semua Pendidik / Guru</option>
+              <option value="Wali Kelas">🏫 Semua Wali Kelas</option>
+              <option value="None">Guru Mapel</option>
+              <option value="Tendik">💼 Semua Tenaga Kependidikan</option>
+              {TENDIK_PRESETS.map(preset => (
+                <option key={preset} value={preset}>— {preset}</option>
+              ))}
               {classesList.map(c => (
-                <option key={c} value={c}>Kelas {c}</option>
+                <option key={c} value={c}>— Wali Kelas {c}</option>
               ))}
             </select>
           </div>
@@ -432,9 +594,9 @@ export default function TeachersList() {
                 <th className="p-4 cursor-pointer hover:bg-indigo-50 transition border border-indigo-100" onClick={() => toggleSort('name')}>
                   Nama Lengkap {sortBy === 'name' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
-                <th className="p-4 border border-indigo-100">Jenis Kelamin</th>
+                <th className="p-4 border border-indigo-100">L/P</th>
                 <th className="p-4 cursor-pointer hover:bg-indigo-50 transition border border-indigo-100" onClick={() => toggleSort('class')}>
-                  Wali Kelas {sortBy === 'class' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  Jabatan / Penugasan {sortBy === 'class' && (sortOrder === 'asc' ? '▲' : '▼')}
                 </th>
                 <th className="p-4 border border-indigo-100">Kontak</th>
                 <th className="p-4 text-center border border-indigo-100">Status</th>
@@ -445,7 +607,7 @@ export default function TeachersList() {
               {sortedTeachers.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-8 text-center text-gray-500 font-medium border border-indigo-100">
-                    Tidak ada data guru yang ditemukan
+                    Tidak ada data guru atau tenaga kependidikan yang ditemukan
                   </td>
                 </tr>
               ) : (
@@ -454,19 +616,11 @@ export default function TeachersList() {
                     <td className="p-4 text-center font-semibold text-gray-400 border border-indigo-100">{idx + 1}</td>
                     <td className="p-4 font-mono font-medium text-gray-600 border border-indigo-100">{t.nip || '-'}</td>
                     <td className="p-4 font-bold text-gray-900 border border-indigo-100">{t.name}</td>
-                    <td className="p-4 text-gray-600 border border-indigo-100">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-                        {t.gender === 'L' ? 'Laki-laki (L)' : 'Perempuan (P)'}
-                      </span>
+                    <td className="p-4 text-gray-600 border border-indigo-100 font-bold text-center">
+                      {t.gender}
                     </td>
                     <td className="p-4 border border-indigo-100">
-                      {t.class === 'None' ? (
-                        <span className="text-gray-400 italic text-xs">Guru Mapel / Lainnya</span>
-                      ) : (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">
-                          Kelas {t.class}
-                        </span>
-                      )}
+                      {renderRoleBadge(t.class)}
                     </td>
                     <td className="p-4 space-y-1 text-xs border border-indigo-100">
                       {t.phone && (
@@ -537,7 +691,7 @@ export default function TeachersList() {
             <div className="p-6 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <GraduationCap className="w-6 h-6" />
-                <h3 className="text-xl font-bold">{editingTeacher ? 'Edit Data Guru' : 'Tambah Guru Baru'}</h3>
+                <h3 className="text-xl font-bold">{editingTeacher ? 'Edit Data Pegawai / GTK' : 'Tambah GTK Baru'}</h3>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="text-white/80 hover:text-white p-1 hover:bg-white/10 rounded-full transition">
                 <X size={20} />
@@ -559,21 +713,21 @@ export default function TeachersList() {
                 />
               </div>
 
-              {/* Nama Guru */}
+              {/* Nama Guru / Pegawai */}
               <div>
-                <label className="label">Nama Lengkap Guru <span className="text-rose-500">*</span></label>
+                <label className="label">Nama Lengkap <span className="text-rose-500">*</span></label>
                 <input 
                   type="text" 
                   className="input font-bold" 
-                  placeholder="Contoh: Budi Santoso, S.Pd." 
+                  placeholder="Contoh: Budi Santoso, S.Pd. atau Sutrisno" 
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
 
-              {/* Jenis Kelamin & Wali Kelas */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Jenis Kelamin & Jabatan */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label">Jenis Kelamin</label>
                   <select 
@@ -585,20 +739,58 @@ export default function TeachersList() {
                     <option value="P">Perempuan (P)</option>
                   </select>
                 </div>
+
                 <div>
-                  <label className="label">Penugasan Wali Kelas</label>
+                  <label className="label">Jabatan / Penugasan <span className="text-rose-500">*</span></label>
                   <select 
                     className="input font-bold"
-                    value={assignedClass}
-                    onChange={(e) => setAssignedClass(e.target.value)}
+                    value={isCustomRole ? 'CUSTOM' : assignedClass}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'CUSTOM') {
+                        setIsCustomRole(true);
+                      } else {
+                        setIsCustomRole(false);
+                        setAssignedClass(val);
+                      }
+                    }}
                   >
-                    <option value="None">Bukan Wali Kelas (Guru Mapel)</option>
-                    {classesList.map(c => (
-                      <option key={c} value={c}>Kelas {c}</option>
-                    ))}
+                    <optgroup label="--- GURU / PENDIDIK ---">
+                      <option value="Kepala Sekolah">⭐ Kepala Sekolah</option>
+                      <option value="None">📘 Guru Mapel (Pengajar)</option>
+                      {classesList.map(c => (
+                        <option key={c} value={c}>🏫 Wali Kelas {c}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="--- TENAGA KEPENDIDIKAN ---">
+                      <option value="Operator Sekolah">💻 Operator Sekolah</option>
+                      <option value="Penjaga Sekolah">🔑 Penjaga Sekolah</option>
+                      <option value="Satpam / Keamanan">🛡️ Satpam / Keamanan</option>
+                      <option value="Petugas Kebersihan">🧹 Petugas Kebersihan</option>
+                      <option value="Tenaga Administrasi (TU)">🏢 Tenaga Administrasi (TU)</option>
+                      <option value="Petugas Perpustakaan">📚 Petugas Perpustakaan</option>
+                    </optgroup>
+                    <optgroup label="--- LAINNYA ---">
+                      <option value="CUSTOM">✏️ Jabatan / Tugas Lainnya...</option>
+                    </optgroup>
                   </select>
                 </div>
               </div>
+
+              {/* Custom Role Input */}
+              {isCustomRole && (
+                <div className="bg-amber-50/80 p-3 rounded-2xl border border-amber-200">
+                  <label className="label text-amber-900 font-bold">Ketik Nama Jabatan / Tugas</label>
+                  <input 
+                    type="text" 
+                    className="input bg-white font-bold" 
+                    placeholder="Contoh: Sopir Bus Sekolah / Teknisi Lab"
+                    value={customRoleInput}
+                    onChange={(e) => setCustomRoleInput(e.target.value)}
+                    required={isCustomRole}
+                  />
+                </div>
+              )}
 
               {/* No Telepon & Email */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -617,7 +809,7 @@ export default function TeachersList() {
                   <input 
                     type="email" 
                     className="input" 
-                    placeholder="Contoh: budi@sekolah.sch.id" 
+                    placeholder="Contoh: nama@sekolah.sch.id" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -626,7 +818,7 @@ export default function TeachersList() {
 
               {/* Status */}
               <div>
-                <label className="label">Status</label>
+                <label className="label">Status Pegawai</label>
                 <select 
                   className="input"
                   value={status}
@@ -671,7 +863,7 @@ export default function TeachersList() {
                   <UploadCloud className="text-amber-300" size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">Menu Import Data Guru</h3>
+                  <h3 className="font-bold text-lg">Menu Import Data GTK</h3>
                   <p className="text-xs text-indigo-200 flex items-center gap-1.5 mt-0.5">
                     <span>📄 {importPreview.fileName}</span>
                     <span>•</span>
@@ -699,7 +891,7 @@ export default function TeachersList() {
                       <tr>
                         <th className="p-2">NIP</th>
                         <th className="p-2">Nama</th>
-                        <th className="p-2">Wali Kelas</th>
+                        <th className="p-2">Jabatan</th>
                         <th className="p-2">Status</th>
                       </tr>
                     </thead>
@@ -747,7 +939,7 @@ export default function TeachersList() {
                         <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">Rekomendasi</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        Jika guru sudah ada (cocok NIP / Nama), data lama akan diperbarui/ditimpa. Guru yang belum ada akan ditambahkan.
+                        Jika pegawai sudah ada (cocok NIP / Nama), data lama akan diperbarui/ditimpa. Pegawai yang belum ada akan ditambahkan.
                       </p>
                     </div>
                   </label>
@@ -775,7 +967,7 @@ export default function TeachersList() {
                         <span className="font-semibold text-sm text-gray-900">Hanya Tambah Data Baru (Abaikan jika Sudah Ada)</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        Jika guru sudah ada di sistem, datanya tidak disentuh/tidak ditimpa. Hanya guru baru yang dimasukkan.
+                        Jika pegawai sudah ada di sistem, datanya tidak disentuh/tidak ditimpa. Hanya pegawai baru yang dimasukkan.
                       </p>
                     </div>
                   </label>
@@ -845,3 +1037,4 @@ export default function TeachersList() {
     </div>
   );
 }
+

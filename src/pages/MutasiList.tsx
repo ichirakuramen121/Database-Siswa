@@ -14,9 +14,34 @@ export default function MutasiList() {
     setLoading, setIsSyncingGlobal 
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'keluar' | 'masuk'>('keluar');
+  const [activeTab, setActiveTab] = useState<'keluar' | 'masuk' | 'riwayat'>('keluar');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState('');
+
+  // Stats calculation
+  const totalKeluarList = useMemo(() => students.filter(s => s.status === 'Pindah' || s.status === 'Keluar'), [students]);
+  const totalMasukList = useMemo(() => students.filter(s => s.status === 'Aktif' && !!s.sekolahAsal), [students]);
+
+  const countKeluarL = useMemo(() => totalKeluarList.filter(s => s.gender === 'L').length, [totalKeluarList]);
+  const countKeluarP = useMemo(() => totalKeluarList.filter(s => s.gender === 'P').length, [totalKeluarList]);
+  const countMasukL = useMemo(() => totalMasukList.filter(s => s.gender === 'L').length, [totalMasukList]);
+  const countMasukP = useMemo(() => totalMasukList.filter(s => s.gender === 'P').length, [totalMasukList]);
+
+  // Combined mutation history
+  const allMutasiStudents = useMemo(() => {
+    return students.filter(s => {
+      const isKeluar = s.status === 'Pindah' || s.status === 'Keluar';
+      const isMasuk = s.status === 'Aktif' && !!s.sekolahAsal;
+      if (!isKeluar && !isMasuk) return false;
+
+      const searchString = searchTerm.toLowerCase();
+      const matchesSearch = s.name.toLowerCase().includes(searchString) || 
+                            s.nis.toLowerCase().includes(searchString) ||
+                            (s.nisn && s.nisn.toLowerCase().includes(searchString));
+      const matchesClass = filterClass ? s.class === filterClass : true;
+      return matchesSearch && matchesClass;
+    });
+  }, [students, searchTerm, filterClass]);
   
   // Modals state
   const [isKeluarModalOpen, setIsKeluarModalOpen] = useState(false);
@@ -215,35 +240,97 @@ export default function MutasiList() {
             <ArrowLeftRight className="text-indigo-600" />
             Mutasi & Keluar Siswa
           </h2>
-          <p className="text-gray-500 mt-1 font-medium">Manajemen mutasi siswa (Keluar ke Sekolah Lain & Masuk dari Sekolah Lain).</p>
+          <p className="text-gray-500 mt-1 font-medium">Manajemen & riwayat lengkap mutasi siswa (Keluar ke Sekolah Lain & Transfer Masuk).</p>
+        </div>
+      </div>
+
+      {/* Summary Metrics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-white/80 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
+            <FileOutput size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Mutasi Keluar</p>
+            <p className="text-2xl font-black text-orange-600">{totalKeluarList.length} <span className="text-xs font-semibold text-gray-400">Siswa</span></p>
+            <p className="text-[10px] text-gray-400 font-medium mt-0.5">L: {countKeluarL} • P: {countKeluarP}</p>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-white/80 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
+            <FileInput size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Mutasi Masuk</p>
+            <p className="text-2xl font-black text-green-600">{totalMasukList.length} <span className="text-xs font-semibold text-gray-400">Siswa</span></p>
+            <p className="text-[10px] text-gray-400 font-medium mt-0.5">L: {countMasukL} • P: {countMasukP}</p>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-white/80 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+            <ArrowLeftRight size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Selisih Siswa Net</p>
+            <p className={cn("text-2xl font-black", (totalMasukList.length - totalKeluarList.length) >= 0 ? "text-indigo-600" : "text-rose-600")}>
+              {(totalMasukList.length - totalKeluarList.length) >= 0 ? `+${totalMasukList.length - totalKeluarList.length}` : (totalMasukList.length - totalKeluarList.length)}
+              <span className="text-xs font-semibold text-gray-400 ml-1">Siswa</span>
+            </p>
+            <p className="text-[10px] text-gray-400 font-medium mt-0.5">Masuk dikurangi Keluar</p>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-white/80 shadow-sm flex items-center gap-3">
+          <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+            <Calendar size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Total Riwayat</p>
+            <p className="text-2xl font-black text-purple-600">{totalKeluarList.length + totalMasukList.length} <span className="text-xs font-semibold text-gray-400">Transaksi</span></p>
+            <p className="text-[10px] text-gray-400 font-medium mt-0.5">Rekap M. Keluar & Masuk</p>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-indigo-100">
+      <div className="flex border-b border-indigo-100 overflow-x-auto hide-scrollbar">
         <button 
           onClick={() => { setActiveTab('keluar'); setSearchTerm(''); }}
           className={cn(
-            "flex items-center gap-2 px-6 py-3.5 font-bold text-sm border-b-2 transition duration-200",
+            "flex items-center gap-2 px-6 py-3.5 font-bold text-sm border-b-2 transition duration-200 whitespace-nowrap",
             activeTab === 'keluar' 
               ? "border-indigo-600 text-indigo-600" 
               : "border-transparent text-gray-400 hover:text-indigo-600"
           )}
         >
           <LogOut size={16} />
-          Mutasi Keluar / Pindah & Keluar
+          Mutasi Keluar ({totalKeluarList.length})
         </button>
         <button 
           onClick={() => { setActiveTab('masuk'); setSearchTerm(''); }}
           className={cn(
-            "flex items-center gap-2 px-6 py-3.5 font-bold text-sm border-b-2 transition duration-200",
+            "flex items-center gap-2 px-6 py-3.5 font-bold text-sm border-b-2 transition duration-200 whitespace-nowrap",
             activeTab === 'masuk' 
               ? "border-indigo-600 text-indigo-600" 
               : "border-transparent text-gray-400 hover:text-indigo-600"
           )}
         >
           <LogIn size={16} />
-          Mutasi Masuk (Siswa Transfer)
+          Mutasi Masuk ({totalMasukList.length})
+        </button>
+        <button 
+          onClick={() => { setActiveTab('riwayat'); setSearchTerm(''); }}
+          className={cn(
+            "flex items-center gap-2 px-6 py-3.5 font-bold text-sm border-b-2 transition duration-200 whitespace-nowrap",
+            activeTab === 'riwayat' 
+              ? "border-indigo-600 text-indigo-600" 
+              : "border-transparent text-gray-400 hover:text-indigo-600"
+          )}
+        >
+          <Calendar size={16} />
+          Semua Riwayat Mutasi ({allMutasiStudents.length})
         </button>
       </div>
 
@@ -350,7 +437,7 @@ export default function MutasiList() {
                 )}
               </tbody>
             </table>
-          ) : (
+          ) : activeTab === 'masuk' ? (
             /* Mutasi Masuk Table */
             <table className="w-full text-sm text-left border-collapse min-w-[800px] border border-indigo-100">
               <thead className="bg-indigo-50/50 z-10 sticky top-0">
@@ -410,6 +497,84 @@ export default function MutasiList() {
                       </td>
                     </tr>
                   ))
+                )}
+              </tbody>
+            </table>
+          ) : (
+            /* Combined History Table */
+            <table className="w-full text-sm text-left border-collapse min-w-[850px] border border-indigo-100">
+              <thead className="bg-indigo-50/50 z-10 sticky top-0">
+                <tr className="text-indigo-950 text-[11px] uppercase tracking-widest border-b border-indigo-100">
+                  <th className="px-6 py-4 font-bold border border-indigo-100">Tipe Mutasi</th>
+                  <th className="px-6 py-4 font-bold border border-indigo-100">NIS / NISN</th>
+                  <th className="px-6 py-4 font-bold border border-indigo-100">Nama Lengkap</th>
+                  <th className="px-4 py-4 font-bold text-center border border-indigo-100">Kelas</th>
+                  <th className="px-4 py-4 font-bold text-center border border-indigo-100">L/P</th>
+                  <th className="px-6 py-4 font-bold border border-indigo-100">Sekolah Asal / Tujuan</th>
+                  <th className="px-6 py-4 font-bold border border-indigo-100">Tanggal Mutasi</th>
+                  <th className="px-6 py-4 font-bold text-right border border-indigo-100">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-indigo-50">
+                {allMutasiStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500 font-medium border border-indigo-100">
+                      Tidak ada riwayat mutasi siswa.
+                    </td>
+                  </tr>
+                ) : (
+                  allMutasiStudents.map(student => {
+                    const isMasuk = student.status === 'Aktif' && !!student.sekolahAsal;
+                    return (
+                      <tr key={student.id} className="hover:bg-white/50 transition-colors">
+                        <td className="px-6 py-4 border border-indigo-100">
+                          {isMasuk ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                              <LogIn size={13} className="text-emerald-600" />
+                              Mutasi Masuk
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800">
+                              <LogOut size={13} className="text-orange-600" />
+                              {student.status === 'Pindah' ? 'Pindah Sekolah' : 'Siswa Keluar'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 font-mono font-medium text-gray-600 border border-indigo-100">
+                          <div>{student.nis}</div>
+                          {student.nisn && <div className="text-xs text-gray-400">{student.nisn}</div>}
+                        </td>
+                        <td className="px-6 py-4 font-bold text-gray-900 border border-indigo-100">{student.name}</td>
+                        <td className="px-4 py-4 text-center border border-indigo-100">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-gray-100 text-gray-700">
+                            {student.class}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center font-medium text-gray-600 border border-indigo-100">{student.gender}</td>
+                        <td className="px-6 py-4 border border-indigo-100">
+                          {isMasuk ? (
+                            <div className="text-xs">
+                              <span className="text-gray-400">Dari: </span>
+                              <span className="font-semibold text-emerald-950">{student.sekolahAsal}</span>
+                            </div>
+                          ) : (
+                            <div className="text-xs">
+                              <span className="text-gray-400">Ke: </span>
+                              <span className="font-semibold text-orange-950">{student.sekolahTujuan || '- (Keluar)'}</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-gray-500 border border-indigo-100">
+                          {student.tanggalMutasi ? new Date(student.tanggalMutasi).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                        </td>
+                        <td className="px-6 py-4 text-right border border-indigo-100">
+                          <button onClick={() => handleRestore(student.id, student.name)} className="px-3 py-1.5 bg-indigo-50 rounded-xl text-xs font-bold text-indigo-600 hover:bg-indigo-100 transition active:scale-95" title="Kembalikan ke status siswa aktif">
+                            Pulihkan
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

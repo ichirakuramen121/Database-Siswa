@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, Settings as SettingsIcon, Menu, X, LogOut, FileOutput, CalendarCheck, TrendingUp, RefreshCw, GraduationCap } from 'lucide-react';
+import { Home, Users, Settings as SettingsIcon, Menu, X, LogOut, FileOutput, CalendarCheck, TrendingUp, RefreshCw, GraduationCap, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import Dashboard from './pages/Dashboard';
 import StudentsList from './pages/StudentsList';
 import TeachersList from './pages/TeachersList';
+import AlumniList from './pages/AlumniList';
 import MutasiList from './pages/MutasiList';
 import AttendancePrint from './pages/AttendancePrint';
 import KenaikanKelas from './pages/KenaikanKelas';
@@ -15,7 +16,7 @@ import { fetchFromGAS } from './lib/api';
 
 function App() {
   const { isAuthenticated, logout, settings, setSettings, setStudents, students, teachers, setTeachers, lastSyncedAt, isSyncingGlobal, setLastSyncedAt, setIsSyncingGlobal } = useStore();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'teachers' | 'mutasi' | 'attendance' | 'kenaikan' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'teachers' | 'alumni' | 'mutasi' | 'attendance' | 'kenaikan' | 'settings'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -192,8 +193,9 @@ function App() {
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'students', label: 'Data Siswa', icon: Users },
     { id: 'teachers', label: 'Data Guru', icon: GraduationCap },
+    { id: 'alumni', label: 'Data Alumni', icon: Award },
     { id: 'mutasi', label: 'Mutasi Siswa', icon: FileOutput },
-    { id: 'attendance', label: 'Cetak Daftar Hadir', icon: CalendarCheck },
+    { id: 'attendance', label: 'Menu Cetak', icon: CalendarCheck },
     { id: 'kenaikan', label: 'Kenaikan Kelas', icon: TrendingUp },
     { id: 'settings', label: 'Pengaturan', icon: SettingsIcon },
   ] as const;
@@ -313,6 +315,7 @@ function App() {
             {activeTab === 'dashboard' && <Dashboard />}
             {activeTab === 'students' && <StudentsList />}
             {activeTab === 'teachers' && <TeachersList />}
+            {activeTab === 'alumni' && <AlumniList />}
             {activeTab === 'mutasi' && <MutasiList />}
             {activeTab === 'attendance' && <AttendancePrint />}
             {activeTab === 'kenaikan' && <KenaikanKelas />}
@@ -352,8 +355,8 @@ function App() {
         </div>
       )}
 
-      {/* Toast / Status Bar Sinkronisasi */}
-      <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 no-print max-w-sm">
+      {/* Toast / Status Bar Sinkronisasi (Ditaruh Di Atas) */}
+      <div className="fixed top-4 right-4 sm:top-5 sm:right-6 z-[9999] flex flex-col gap-2 no-print max-w-sm">
         {(isSyncingGlobal || lastSyncedAt) && (
           <div className={cn(
             "p-3 sm:p-4 rounded-2xl shadow-xl border backdrop-blur-md flex items-center gap-3 transition-all duration-300 transform translate-y-0",

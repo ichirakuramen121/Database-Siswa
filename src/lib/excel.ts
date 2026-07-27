@@ -309,44 +309,80 @@ export const downloadStudentExcelTemplate = (filename: string = 'Template_Import
   XLSX.writeFile(wb, filename);
 };
 
-export const downloadTeacherExcelTemplate = (filename: string = 'Template_Import_Guru.xlsx') => {
+export const downloadTeacherExcelTemplate = (filename: string = 'Template_Import_Guru_Tendik.xlsx') => {
   const exampleData = [
+    {
+      "NIP": "197501011998031001",
+      "Nama Lengkap": "Drs. H. Mulyadi, M.Pd.",
+      "L/P": "L",
+      "Wali Kelas / Jabatan": "Kepala Sekolah",
+      "No Telepon": "081234567890",
+      "Email": "kepsek@sekolah.sch.id",
+      "Status": "Aktif"
+    },
     {
       "NIP": "198501012010011001",
       "Nama Lengkap": "Budi Santoso, S.Pd",
       "L/P": "L",
-      "Wali Kelas": "1A",
-      "No Telepon": "081234567890",
+      "Wali Kelas / Jabatan": "1A",
+      "No Telepon": "081234567891",
       "Email": "budi@sekolah.sch.id",
       "Status": "Aktif"
     },
     {
-      "NIP": "199002022015022002",
-      "Nama Lengkap": "Dewi Lestari, M.Pd",
-      "L/P": "P",
-      "Wali Kelas": "2B",
+      "NIP": "-",
+      "Nama Lengkap": "Ahmad Rian, A.Md.",
+      "L/P": "L",
+      "Wali Kelas / Jabatan": "Operator Sekolah",
       "No Telepon": "085678901234",
-      "Email": "dewi@sekolah.sch.id",
+      "Email": "operator@sekolah.sch.id",
+      "Status": "Aktif"
+    },
+    {
+      "NIP": "-",
+      "Nama Lengkap": "Sutrisno",
+      "L/P": "L",
+      "Wali Kelas / Jabatan": "Penjaga Sekolah",
+      "No Telepon": "081299887766",
+      "Email": "-",
+      "Status": "Aktif"
+    },
+    {
+      "NIP": "-",
+      "Nama Lengkap": "Hendra Wijaya",
+      "L/P": "L",
+      "Wali Kelas / Jabatan": "Satpam / Keamanan",
+      "No Telepon": "082133445566",
+      "Email": "-",
+      "Status": "Aktif"
+    },
+    {
+      "NIP": "-",
+      "Nama Lengkap": "Siti Aminah",
+      "L/P": "P",
+      "Wali Kelas / Jabatan": "Petugas Kebersihan",
+      "No Telepon": "083811223344",
+      "Email": "-",
       "Status": "Aktif"
     }
   ];
 
   const ws = XLSX.utils.json_to_sheet(exampleData, {
-    header: ["NIP", "Nama Lengkap", "L/P", "Wali Kelas", "No Telepon", "Email", "Status"]
+    header: ["NIP", "Nama Lengkap", "L/P", "Wali Kelas / Jabatan", "No Telepon", "Email", "Status"]
   });
 
   ws['!cols'] = [
     { wch: 20 },
     { wch: 28 },
     { wch: 8 },
-    { wch: 12 },
+    { wch: 22 },
     { wch: 16 },
     { wch: 25 },
     { wch: 12 }
   ];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Template Guru");
+  XLSX.utils.book_append_sheet(wb, ws, "Template GTK");
   XLSX.writeFile(wb, filename);
 };
 
@@ -373,20 +409,20 @@ export const exportToExcel = (students: Student[], filename: string = 'data-sisw
   XLSX.writeFile(wb, filename);
 };
 
-export const exportTeachersToExcel = (teachers: any[], filename: string = 'data-guru.xlsx') => {
+export const exportTeachersToExcel = (teachers: any[], filename: string = 'data-guru-tendik.xlsx') => {
   const ws = XLSX.utils.json_to_sheet(teachers.map((t, idx) => ({
     "No": idx + 1,
     "NIP": t.nip || '-',
     "Nama Lengkap": t.name,
     "L/P": t.gender,
-    "Wali Kelas": t.class === 'None' ? '-' : t.class,
+    "Jabatan / Wali Kelas": t.class === 'None' ? 'Guru Mapel' : t.class,
     "No Telepon": t.phone || '-',
     "Email": t.email || '-',
     "Status": t.status,
   })));
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Data Guru");
+  XLSX.utils.book_append_sheet(wb, ws, "Data GTK");
   XLSX.writeFile(wb, filename);
 };
 
@@ -421,13 +457,22 @@ export const importTeachersFromExcel = (file: File): Promise<Partial<Teacher>[]>
           const nipKey = Object.keys(row).find(k => k.toLowerCase().includes('nip'));
           const nameKey = Object.keys(row).find(k => k.toLowerCase().includes('nama') || k.toLowerCase().includes('name'));
           const genderKey = Object.keys(row).find(k => k.toLowerCase().includes('l/p') || k.toLowerCase().includes('jk') || k.toLowerCase().includes('gender'));
-          const classKey = Object.keys(row).find(k => k.toLowerCase().includes('kelas') || k.toLowerCase().includes('wali') || k.toLowerCase().includes('class'));
+          const classKey = Object.keys(row).find(k => k.toLowerCase().includes('kelas') || k.toLowerCase().includes('wali') || k.toLowerCase().includes('jabatan') || k.toLowerCase().includes('class'));
           const phoneKey = Object.keys(row).find(k => k.toLowerCase().includes('telp') || k.toLowerCase().includes('phone') || k.toLowerCase().includes('hp') || k.toLowerCase().includes('wa') || k.toLowerCase().includes('telepon'));
           const emailKey = Object.keys(row).find(k => k.toLowerCase().includes('email'));
           const statusKey = Object.keys(row).find(k => k.toLowerCase().includes('status'));
 
-          let assignedClass = String((classKey ? row[classKey] : row['Wali Kelas'] || row['Kelas']) || 'None');
-          assignedClass = assignedClass.toUpperCase().replace(/KELAS/g, '').replace(/[-_]/g, '').trim() || 'None';
+          let assignedClassRaw = String((classKey ? row[classKey] : row['Wali Kelas / Jabatan'] || row['Wali Kelas'] || row['Jabatan'] || row['Kelas']) || 'None').trim();
+          let assignedClass = 'None';
+          if (assignedClassRaw.toUpperCase().includes('KEPALA') || assignedClassRaw.toUpperCase() === 'KS') {
+            assignedClass = 'Kepala Sekolah';
+          } else if (assignedClassRaw.toUpperCase() === 'NONE' || assignedClassRaw === '-' || !assignedClassRaw) {
+            assignedClass = 'None';
+          } else if (/^[1-6][A-Z]?$/i.test(assignedClassRaw) || assignedClassRaw.toUpperCase().startsWith('KELAS')) {
+            assignedClass = assignedClassRaw.toUpperCase().replace(/KELAS/g, '').replace(/[-_]/g, '').trim() || 'None';
+          } else {
+            assignedClass = assignedClassRaw;
+          }
 
           let statusRaw = String((statusKey ? row[statusKey] : row['Status']) || 'Aktif');
           const status: 'Aktif' | 'Nonaktif' = statusRaw.toLowerCase().includes('non') ? 'Nonaktif' : 'Aktif';

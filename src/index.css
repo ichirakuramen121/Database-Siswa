@@ -71,6 +71,7 @@
     border-collapse: collapse !important;
     table-layout: fixed !important;
     page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   .print-table th, .print-table td {
     padding: 1.5px 2px !important;
@@ -80,16 +81,20 @@
     overflow-wrap: break-word !important;
   }
   
-  /* Force 1-page fit on landscape print */
+  /* Standard 1-page document fit styling */
   @page {
-    size: A4 landscape; 
-    margin: 4mm 6mm;
+    size: auto; 
+    margin: 5mm 8mm;
   }
 
   .print-single-page {
     page-break-after: avoid !important;
+    page-break-before: avoid !important;
     page-break-inside: avoid !important;
-    max-height: 100vh !important;
+    break-after: avoid !important;
+    break-before: avoid !important;
+    break-inside: avoid !important;
+    max-height: 280mm !important;
     overflow: hidden !important;
   }
 }
